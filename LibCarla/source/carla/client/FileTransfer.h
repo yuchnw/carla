@@ -8,9 +8,11 @@
 
 #include "carla/FileSystem.h"
 
+#include <cstdint>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 namespace carla {
 namespace client {

@@ -83,7 +83,8 @@ public class Carla : ModuleRules
         "Renderer",
         "ProceduralMeshComponent",
         "MeshDescription",
-        "Projects"
+        "Projects",
+        "UnrealYAML"
         // ... add other public dependencies that you statically link with here ...
       }
       );

@@ -1,0 +1,12 @@
+float64 ego_lat
+float64 ego_lon
+float32 ego_z
+float32 ego_yaw
+---
+bool success
+sensor_msgs/CompressedImage front_left_camera
+# sensor_msgs/CompressedImage front_right_camera
+# sensor_msgs/CompressedImage rear_left_camera
+# sensor_msgs/CompressedImage rear_right_camera
+# sensor_msgs/CompressedImage side_left_camera
+# sensor_msgs/CompressedImage side_right_camera

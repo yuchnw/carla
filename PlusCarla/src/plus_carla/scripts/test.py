@@ -58,6 +58,10 @@ s_lr = None
 s_rf = None
 s_rs = None
 s_rr = None
+obs_vehicle_list = []
+
+BB_COLOR = (248, 64, 24)
+SPAWN_OBS = False
 
 class CustomTimer:
     def __init__(self):
@@ -84,6 +88,7 @@ class DisplayManager:
         self.grid_size = grid_size
         self.window_size = window_size
         self.sensor_list = []
+        self.frame_num = 0
 
     def get_window_size(self):
         return [int(self.window_size[0]), int(self.window_size[1])]
@@ -101,12 +106,16 @@ class DisplayManager:
     def get_sensor_list(self):
         return self.sensor_list
 
-    def render(self):
+    def render(self, bounding_boxes_map):
         if not self.render_enabled():
             return
 
         for s in self.sensor_list:
-            s.render()
+            s.render(bounding_boxes_map[s.sensor_name])
+
+        # image.save_to_disk('_out/%06d.png' % image.frame)
+        self.frame_num += 1
+        pygame.image.save(self.display, '_out/frame{}.png'.format(self.frame_num))
 
         pygame.display.flip()
 
@@ -116,6 +125,117 @@ class DisplayManager:
 
     def render_enabled(self):
         return self.display != None
+
+class ClientSideBoundingBoxes(object):
+    """
+    This is a module responsible for creating 3D bounding boxes and drawing them
+    client-side on pygame surface.
+    """
+
+    @staticmethod
+    def get_bounding_boxes(vehicles, camera):
+        """
+        Creates 3D bounding boxes based on carla vehicle list and camera.
+        """
+
+        bounding_boxes = [ClientSideBoundingBoxes.get_bounding_box(vehicle, camera) for vehicle in vehicles]
+        # filter objects behind camera
+        bounding_boxes = [bb for bb in bounding_boxes if all(bb[:, 2] > 0)]
+        return bounding_boxes
+
+    @staticmethod
+    def get_bounding_box(vehicle, camera):
+        """
+        Returns 3D bounding box for a vehicle based on camera view.
+        """
+
+        bb_cords = ClientSideBoundingBoxes._create_bb_points(vehicle)
+        cords_x_y_z = ClientSideBoundingBoxes._vehicle_to_sensor(bb_cords, vehicle, camera)[:3, :]
+        cords_y_minus_z_x = np.concatenate([cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
+        bbox = np.transpose(np.dot(camera.calibration, cords_y_minus_z_x))
+        camera_bbox = np.concatenate([bbox[:, 0] / bbox[:, 2], bbox[:, 1] / bbox[:, 2], bbox[:, 2]], axis=1)
+        return camera_bbox
+
+    @staticmethod
+    def _create_bb_points(vehicle):
+        """
+        Returns 3D bounding box for a vehicle.
+        """
+
+        cords = np.zeros((8, 4))
+        extent = vehicle.bounding_box.extent
+        cords[0, :] = np.array([extent.x, extent.y, -extent.z, 1])
+        cords[1, :] = np.array([-extent.x, extent.y, -extent.z, 1])
+        cords[2, :] = np.array([-extent.x, -extent.y, -extent.z, 1])
+        cords[3, :] = np.array([extent.x, -extent.y, -extent.z, 1])
+        cords[4, :] = np.array([extent.x, extent.y, extent.z, 1])
+        cords[5, :] = np.array([-extent.x, extent.y, extent.z, 1])
+        cords[6, :] = np.array([-extent.x, -extent.y, extent.z, 1])
+        cords[7, :] = np.array([extent.x, -extent.y, extent.z, 1])
+        return cords
+
+    @staticmethod
+    def _vehicle_to_sensor(cords, vehicle, sensor):
+        """
+        Transforms coordinates of a vehicle bounding box to sensor.
+        """
+
+        world_cord = ClientSideBoundingBoxes._vehicle_to_world(cords, vehicle)
+        sensor_cord = ClientSideBoundingBoxes._world_to_sensor(world_cord, sensor)
+        return sensor_cord
+
+    @staticmethod
+    def _vehicle_to_world(cords, vehicle):
+        """
+        Transforms coordinates of a vehicle bounding box to world.
+        """
+
+        bb_transform = carla.Transform(vehicle.bounding_box.location)
+        bb_vehicle_matrix = ClientSideBoundingBoxes.get_matrix(bb_transform)
+        vehicle_world_matrix = ClientSideBoundingBoxes.get_matrix(vehicle.get_transform())
+        bb_world_matrix = np.dot(vehicle_world_matrix, bb_vehicle_matrix)
+        world_cords = np.dot(bb_world_matrix, np.transpose(cords))
+        return world_cords
+
+    @staticmethod
+    def _world_to_sensor(cords, sensor):
+        """
+        Transforms world coordinates to sensor.
+        """
+
+        sensor_world_matrix = ClientSideBoundingBoxes.get_matrix(sensor.get_transform())
+        world_sensor_matrix = np.linalg.inv(sensor_world_matrix)
+        sensor_cords = np.dot(world_sensor_matrix, cords)
+        return sensor_cords
+
+    @staticmethod
+    def get_matrix(transform):
+        """
+        Creates matrix from carla transform.
+        """
+
+        rotation = transform.rotation
+        location = transform.location
+        c_y = np.cos(np.radians(rotation.yaw))
+        s_y = np.sin(np.radians(rotation.yaw))
+        c_r = np.cos(np.radians(rotation.roll))
+        s_r = np.sin(np.radians(rotation.roll))
+        c_p = np.cos(np.radians(rotation.pitch))
+        s_p = np.sin(np.radians(rotation.pitch))
+        matrix = np.matrix(np.identity(4))
+        matrix[0, 3] = location.x
+        matrix[1, 3] = location.y
+        matrix[2, 3] = location.z
+        matrix[0, 0] = c_p * c_y
+        matrix[0, 1] = c_y * s_p * s_r - s_y * c_r
+        matrix[0, 2] = -c_y * s_p * c_r - s_y * s_r
+        matrix[1, 0] = s_y * c_p
+        matrix[1, 1] = s_y * s_p * s_r + c_y * c_r
+        matrix[1, 2] = -s_y * s_p * c_r + c_y * s_r
+        matrix[2, 0] = s_p
+        matrix[2, 1] = -c_p * s_r
+        matrix[2, 2] = c_p * c_r
+        return matrix
 
 class SensorManager:
     def __init__(self, world, display_man, sensor_type, transform, attached, sensor_options, display_pos):
@@ -141,7 +261,14 @@ class SensorManager:
                 camera_bp.set_attribute(key, sensor_options[key])
 
             camera = self.world.spawn_actor(camera_bp, transform, attach_to=attached)
+            calibration = np.identity(3)
+            calibration[0, 2] = 640 / 2.0
+            calibration[1, 2] = 360 / 2.0
+            calibration[0, 0] = calibration[1, 1] = 640 / (2.0 * np.tan(camera_bp.get_attribute('fov').as_float() * np.pi / 360.0))
+            camera.calibration = calibration
             camera.listen(self.save_rgb_image)
+
+            self.sensor_name = camera_bp.get_attribute('role_name').as_str()
 
             return camera
         
@@ -165,8 +292,6 @@ class SensorManager:
         self.ros_image.data = np.array(jpeg).tobytes()
 
     def save_rgb_image(self, image):
-        # t_start = self.timer.time()
-
         image.convert(carla.ColorConverter.Raw)
         array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
         array = np.reshape(array, (image.height, image.width, 4))
@@ -176,12 +301,29 @@ class SensorManager:
         if self.display_man.render_enabled():
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        # t_end = self.timer.time()
-
         self.capture_image(image)
 
-    def render(self):
+    def render(self, bounding_boxes):
         if self.surface is not None:
+            for bbox in bounding_boxes:
+                points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
+                # draw lines
+                # base
+                pygame.draw.line(self.surface, BB_COLOR, points[0], points[1])
+                pygame.draw.line(self.surface, BB_COLOR, points[0], points[1])
+                pygame.draw.line(self.surface, BB_COLOR, points[1], points[2])
+                pygame.draw.line(self.surface, BB_COLOR, points[2], points[3])
+                pygame.draw.line(self.surface, BB_COLOR, points[3], points[0])
+                # top
+                pygame.draw.line(self.surface, BB_COLOR, points[4], points[5])
+                pygame.draw.line(self.surface, BB_COLOR, points[5], points[6])
+                pygame.draw.line(self.surface, BB_COLOR, points[6], points[7])
+                pygame.draw.line(self.surface, BB_COLOR, points[7], points[4])
+                # base-top
+                pygame.draw.line(self.surface, BB_COLOR, points[0], points[4])
+                pygame.draw.line(self.surface, BB_COLOR, points[1], points[5])
+                pygame.draw.line(self.surface, BB_COLOR, points[2], points[6])
+                pygame.draw.line(self.surface, BB_COLOR, points[3], points[7])
             offset = self.display_man.get_display_offset(self.display_pos)
             self.display_man.display.blit(self.surface, offset)
 
@@ -194,7 +336,21 @@ class ScenarioProcessor:
         with open(scenario_file, 'r') as s_file:
             content = sanitize_text(s_file.read())
             protobuf_text_format.Merge(content, self.scenario)
-        print(self.scenario)
+        self.obs_map = {}
+        self.get_obs()
+
+    def get_obs(self):
+        import pyproj_eqdc
+        for v in self.scenario.scenario_data.vehicles:
+            if v.is_ego:
+                continue
+            EQDC_CONVERTER = pyproj_eqdc.EqdcConverter()
+            EQDC_CONVERTER.configure('NA', 'WGS84')
+            lat, lon = EQDC_CONVERTER.to_latlon(v.state.x, v.state.y)
+            obs_x, obs_y = convert_to_carla_coord(lat, lon)
+            self.obs_map[v.id] = [obs_x, obs_y, -math.degrees(v.state.yaw), v.state.v]
+        print(self.obs_map)
+            
 
 def convert_to_carla_coord(lat, lon):
     proj_str = '+proj=tmerc +lat_0=29.81145 +lon_0=-98.0087 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs'
@@ -203,20 +359,25 @@ def convert_to_carla_coord(lat, lon):
     return x,-y
 
 def handle_plus_vehicle_control(req):
-    print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-    global vehicle, s_fc, s_fl, s_fr, s_lf, s_ls, s_lr, s_rf, s_rf, s_rs, s_rr, display_manager
+    # print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+    global vehicle, s_fc, s_fl, s_fr, s_lf, s_ls, s_lr, s_rf, s_rf, s_rs, s_rr, display_manager, obs_vehicle_list
+    global SPAWN_OBS
     if not vehicle:
         rospy.logerr("Vehicle not initialized!")
         return SimConnectResponse(False, Image(), Image(), Image(), Image(), Image(), Image(), Image(), Image(), Image())
     
+    if not SPAWN_OBS:
+        for obs in obs_vehicle_list:
+            obs.set_autopilot(True)
+        SPAWN_OBS = True
+
     # Move the vehicle
     ego_lat = req.ego_lat
     ego_lon = req.ego_lon
     ego_x, ego_y = convert_to_carla_coord(ego_lat, ego_lon)
     ego_yaw = -math.degrees(req.ego_yaw)
+    print(ego_yaw)
     new_transform = carla.Transform(carla.Location(x=ego_x, y=ego_y), carla.Rotation(yaw=ego_yaw))
-    # print(ego_lat, ego_lon)
-    # print(ego_x, ego_y, ego_yaw)
     vehicle.set_transform(new_transform)
 
     # spectator_transform = vehicle.get_transform()
@@ -224,11 +385,14 @@ def handle_plus_vehicle_control(req):
     # print(spectator_transform)
     # spectator.set_transform(spectator_transform)
 
+    # Get bounding boxes
+    bounding_boxes_map = {}
+    bounding_boxes_map[s_fc.sensor_name] = []
+    for s in [s_fl, s_fr, s_lf, s_ls, s_lr, s_rf, s_rf, s_rs, s_rr]:
+        bounding_boxes_map[s.sensor_name] = []
+        # bounding_boxes_map[s.sensor_name] = ClientSideBoundingBoxes.get_bounding_boxes(obs_vehicle_list, s.sensor)
     # Render received data
-    display_manager.render()
-
-    print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-    print("===")
+    display_manager.render(bounding_boxes_map)
 
     return SimConnectResponse(True,
                               s_fl.ros_image,
@@ -248,7 +412,7 @@ def run_simulation(args, client):
     vehicle_list = []
     timer = CustomTimer()
 
-    global vehicle, s_fc, s_fl, s_fr, s_lf, s_ls, s_lr, s_rf, s_rf, s_rs, s_rr, display_manager
+    global vehicle, s_fc, s_fl, s_fr, s_lf, s_ls, s_lr, s_rf, s_rf, s_rs, s_rr, display_manager, obs_vehicle_list
 
     try:
         # Connect to simulator node
@@ -269,10 +433,13 @@ def run_simulation(args, client):
 
 
         # Instanciating the vehicle to which we attached the sensors
+        spectator = world.get_spectator()
         bp = world.get_blueprint_library().filter('vehicle.mercedes.sprinter')[0]
         transform = carla.Transform(
-            carla.Location(-1790.853, 2528.455, 3), #I35-New lat_lon(29.7886388, -98.0272216)
+            # carla.Location(-1790.853, 2528.455, 3), #I35-New lat_lon(29.7886388, -98.0272216)
+            carla.Location(-2251.36285433037, 3160.0232528821402, 3), #I35-New lat_lon(29.7829405, -98.031983)
             carla.Rotation())
+        spectator.set_transform(transform)
         vehicle = world.spawn_actor(bp, transform)
         vehicle_list.append(vehicle)
         # vehicle.set_autopilot(True)
@@ -293,88 +460,107 @@ def run_simulation(args, client):
         
         # Front Left Camera
         s_fl = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=2.365, y=-0.77, z=1.12), carla.Rotation(yaw=+00)), 
-                        imu, {'fov': '47'}, display_pos=[0, 0])
+                        imu, {'fov': '47', 'role_name': 'front_left_camera'}, display_pos=[0, 0])
         
         # Front Right Camera
         s_fr = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=2.45, y=0.318, z=1.12), carla.Rotation(yaw=+00)), 
-                        imu, {'fov': '47'}, display_pos=[0, 2])
+                        imu, {'fov': '47', 'role_name': 'front_right_camera'}, display_pos=[0, 2])
         
         # Left Front Camera
         s_lf = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.077, y=-1.265, z=1.487), carla.Rotation(roll=-90, pitch=-10, yaw=-33)), 
-                        imu, {'fov': '120'}, display_pos=[1, 2])
+                        imu, {'fov': '120', 'role_name': 'left_front_camera'}, display_pos=[1, 2])
         
         # Left Side Camera
         s_ls = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.154, y=-1.293, z=1.487), carla.Rotation(roll=-90, pitch=-32, yaw=-93)), 
-                        imu, {'fov': '120'}, display_pos=[1, 1])
+                        imu, {'fov': '120', 'role_name': 'left_side_camera'}, display_pos=[1, 1])
         
         # Left Rear Camera
         s_lr = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.232, y=-1.283, z=1.487), carla.Rotation(roll=-90, pitch=-4, yaw=-153)), 
-                        imu, {'fov': '120'}, display_pos=[1, 0])
+                        imu, {'fov': '120', 'role_name': 'left_rear_camera'}, display_pos=[1, 0])
         
         # Right Front Camera
         s_rf = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.077, y=1.265, z=1.487), carla.Rotation(roll=-90, pitch=-10, yaw=33)), 
-                        imu, {'fov': '120'}, display_pos=[2, 0])
+                        imu, {'fov': '120', 'role_name': 'right_front_camera'}, display_pos=[2, 0])
         
         # Right Side Camera
         s_rs = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.154, y=1.293, z=1.487), carla.Rotation(roll=-90, pitch=-32, yaw=93)), 
-                        imu, {'fov': '120'}, display_pos=[2, 1])
+                        imu, {'fov': '120', 'role_name': 'right_side_camera'}, display_pos=[2, 1])
         
         # Right Rear Camera
         s_rr = SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=-0.232, y=1.283, z=1.487), carla.Rotation(roll=-90, pitch=-4, yaw=153)), 
-                        imu, {'fov': '120'}, display_pos=[2, 2])
+                        imu, {'fov': '120', 'role_name': 'right_rear_camera'}, display_pos=[2, 2])
         
-        # Get camera sensor
-        camera = s_lr.sensor
+        # # Get camera sensor
+        # camera = s_lr.sensor
 
-        # Image resolution
-        image_w, image_h = 1920, 1080
+        # # Image resolution
+        # image_w, image_h = 1920, 1080
 
-        # Get calibration
-        R, P, M, D = get_camera_calibration(camera, image_w, image_h)
+        # # Get calibration
+        # R, P, M, D = get_camera_calibration(camera, image_w, image_h)
 
-        print("Intrinsic Matrix (M):\n", M)
-        print("Distortion Coefficients (D):", D)
-        print("Rectification Matrix (R):\n", R)
-        print("Projection Matrix (P):\n", P)
+        # print("Intrinsic Matrix (M):\n", M)
+        # print("Distortion Coefficients (D):", D)
+        # print("Rectification Matrix (R):\n", R)
+        # print("Projection Matrix (P):\n", P)
 
         # Spawning obstacles
-        obs1_tf = carla.Transform(
-            carla.Location(-1796.130, 2529.299, 3),
-            carla.Rotation(yaw=-45))
-        obs1_bp = world.get_blueprint_library().filter('vehicle.lincoln.mkz_2017')[0]
-        obs1 = world.try_spawn_actor(obs1_bp, obs1_tf)
-        if obs1 is not None:
-            obs1.set_autopilot(True)
-            print('created %s' % obs1.type_id)
+        sp = ScenarioProcessor(args.scenario_file)
+        obs_map = sp.obs_map
 
-        time.sleep(1)
+        for id, state in obs_map.items():
+            obs_tf = carla.Transform(
+                carla.Location(state[0], state[1], 3),
+                carla.Rotation(yaw=state[2]))
+            obs_bp = world.get_blueprint_library().filter('vehicle.lincoln.mkz_2017')[0]
+            obs = world.try_spawn_actor(obs_bp, obs_tf)
+            if obs is not None:
+                # obs1.set_autopilot(True)
+                print('created %s' % obs.type_id)
+                obs_vehicle_list.append(obs)
+            # time.sleep(1)
 
-        obs2_tf = carla.Transform(
-            carla.Location(-1776.360, 2517.982, 3),
-            carla.Rotation(yaw=-45))
-        obs2_bp = world.get_blueprint_library().filter('vehicle.ford.crown')[0]
-        obs2 = world.try_spawn_actor(obs2_bp, obs2_tf)
-        if obs2 is not None:
-            obs2.set_autopilot(True)
-            print('created %s' % obs2.type_id)
+        # obs1_tf = carla.Transform(
+        #     carla.Location(-1796.130, 2529.299, 3),
+        #     carla.Rotation(yaw=-45))
+        # obs1_bp = world.get_blueprint_library().filter('vehicle.lincoln.mkz_2017')[0]
+        # obs1 = world.try_spawn_actor(obs1_bp, obs1_tf)
+        # if obs1 is not None:
+        #     # obs1.set_autopilot(True)
+        #     print('created %s' % obs1.type_id)
+        #     obs_vehicle_list.append(obs1)
 
-        obs3_tf = carla.Transform(
-            carla.Location(-1749.236, 2482.427, 3),
-            carla.Rotation(yaw=-45))
-        obs3_bp = world.get_blueprint_library().filter('vehicle.chevrolet.impala')[0]
-        obs3 = world.try_spawn_actor(obs3_bp, obs3_tf)
-        if obs3 is not None:
-            obs3.set_autopilot(True)
-            print('created %s' % obs3.type_id)
+        # time.sleep(1)
 
-        obs4_tf = carla.Transform(
-            carla.Location(-1821.712, 2567.373, 3),
-            carla.Rotation(yaw=-45))
-        obs4_bp = world.get_blueprint_library().filter('vehicle.mercedes.coupe_2020')[0]
-        obs4 = world.try_spawn_actor(obs4_bp, obs4_tf)
-        if obs4 is not None:
-            obs4.set_autopilot(True)
-            print('created %s' % obs4.type_id)
+        # obs2_tf = carla.Transform(
+        #     carla.Location(-1776.360, 2517.982, 3),
+        #     carla.Rotation(yaw=-45))
+        # obs2_bp = world.get_blueprint_library().filter('vehicle.ford.crown')[0]
+        # obs2 = world.try_spawn_actor(obs2_bp, obs2_tf)
+        # if obs2 is not None:
+        #     # obs2.set_autopilot(True)
+        #     print('created %s' % obs2.type_id)
+        #     obs_vehicle_list.append(obs2)
+
+        # obs3_tf = carla.Transform(
+        #     carla.Location(-1749.236, 2482.427, 3),
+        #     carla.Rotation(yaw=-45))
+        # obs3_bp = world.get_blueprint_library().filter('vehicle.chevrolet.impala')[0]
+        # obs3 = world.try_spawn_actor(obs3_bp, obs3_tf)
+        # if obs3 is not None:
+        #     # obs3.set_autopilot(True)
+        #     print('created %s' % obs3.type_id)
+        #     obs_vehicle_list.append(obs3)
+
+        # obs4_tf = carla.Transform(
+        #     carla.Location(-1821.712, 2567.373, 3),
+        #     carla.Rotation(yaw=-45))
+        # obs4_bp = world.get_blueprint_library().filter('vehicle.mercedes.coupe_2020')[0]
+        # obs4 = world.try_spawn_actor(obs4_bp, obs4_tf)
+        # if obs4 is not None:
+        #     # obs4.set_autopilot(True)
+        #     print('created %s' % obs4.type_id)
+        #     obs_vehicle_list.append(obs4)
 
         #Simulation loop
         call_exit = False
@@ -404,6 +590,7 @@ def run_simulation(args, client):
             display_manager.destroy()
 
         client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_list])
+        # obs_vehicle_list.clear()
 
         world.apply_settings(original_settings)
 
@@ -427,6 +614,23 @@ def get_camera_calibration(sensor, image_w, image_h):
     P[:3, :3] = M  # Use intrinsic matrix
 
     return R, P, M, D
+
+def generate_video(srcdir):
+    from pluspy import ffmpeg_utils
+    # Generate video...
+    PICT_EXT = ".png"
+    FRAME_RATE = 10
+    VID_FILE = 'vid.mp4'
+    vid_output = os.path.join(srcdir, VID_FILE)
+    short_pict = PICT_EXT.strip(".")
+    print("Building video file %s from %s files in %s" % (vid_output, PICT_EXT, srcdir))
+    am_files, secs_elapsed = ffmpeg_utils.generate_video_from_files(
+        ffmpeg_utils.file_lister(srcdir, "frame", PICT_EXT), FRAME_RATE, vid_output,
+        threads=1, gpu_accel=True)
+    if am_files == 0:
+        raise RuntimeError("Couldn't find any %s files to generate video." % short_pict)
+    # print("Took %s to run ffmpeg against %s %s files" % (r_utils.format_secs(secs_elapsed),
+    #                                                      am_files, short_pict))
 
 def main():
     argparser = argparse.ArgumentParser(
@@ -468,8 +672,11 @@ def main():
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(5.0)
-
         run_simulation(args, client)
+
+        time.sleep(1)
+
+        generate_video('/home/yuchen/workspace/carla/PlusCarla/src/plus_carla/scripts/_out')
 
     except KeyboardInterrupt:
         print('\nCancelled by user. Bye!')

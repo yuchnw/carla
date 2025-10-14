@@ -68,6 +68,7 @@
 #include <carla/sensor/data/LaneInvasionEvent.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/SemanticLidarMeasurement.h>
+#include <carla/sensor/data/FMCWLidarMeasurement.h>
 #include <carla/sensor/data/GnssMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 #include <carla/sensor/data/DVSEventArray.h>

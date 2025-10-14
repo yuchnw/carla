@@ -43,6 +43,14 @@ namespace data {
     return out;
   }
 
+  std::ostream &operator<<(std::ostream &out, const FMCWLidarMeasurement &meas) {
+    out << "FMCWLidarMeasurement(frame=" << std::to_string(meas.GetFrame())
+        << ", timestamp=" << std::to_string(meas.GetTimestamp())
+        << ", number_of_points=" << std::to_string(meas.size())
+        << ')';
+    return out;
+  }
+
   std::ostream &operator<<(std::ostream &out, const CollisionEvent &meas) {
     out << "CollisionEvent(frame=" << std::to_string(meas.GetFrame())
         << ", timestamp=" << std::to_string(meas.GetTimestamp())
@@ -137,6 +145,21 @@ namespace data {
         << ", cos_inc_angle=" << std::to_string(det.cos_inc_angle)
         << ", object_idx=" << std::to_string(det.object_idx)
         << ", object_tag=" << std::to_string(det.object_tag)
+        << ')';
+    return out;
+  }
+
+  std::ostream &operator<<(std::ostream &out, const FMCWLidarDetection &det) {
+    out << "FMCWLidarDetection(az=" << std::to_string(det.azimuth)
+        << ", el=" << std::to_string(det.elevation)
+        << ", r=" << std::to_string(det.range)
+        << ", intensity=" << std::to_string(det.intensity)
+        << ", velocity=" << std::to_string(det.velocity)
+        << ", cos_inc_angle=" << std::to_string(det.cos_inc_angle)
+        << ", object_idx=" << std::to_string(det.object_idx)
+        << ", object_tag=" << std::to_string(det.object_tag)
+        << ", point_idx=" << std::to_string(det.point_idx)
+        << ", beam_idx=" << std::to_string(det.beam_idx)
         << ')';
     return out;
   }
@@ -438,6 +461,25 @@ void export_sensor_data() {
     .def(self_ns::str(self_ns::self))
   ;
 
+  class_<csd::FMCWLidarMeasurement, bases<cs::SensorData>, boost::noncopyable, boost::shared_ptr<csd::FMCWLidarMeasurement>>("FMCWLidarMeasurement", no_init)
+    .add_property("horizontal_angle", &csd::FMCWLidarMeasurement::GetHorizontalAngle)
+    .add_property("channels", &csd::FMCWLidarMeasurement::GetChannelCount)
+    .add_property("beams", &csd::FMCWLidarMeasurement::GetBeamCount)
+    .add_property("raw_data", &GetRawDataAsBuffer<csd::FMCWLidarMeasurement>)
+    .def("get_point_count_channel", &csd::FMCWLidarMeasurement::GetPointsPerChannel)
+    .def("get_point_count_beam", &csd::FMCWLidarMeasurement::GetPointsPerBeam)
+    .def("save_to_disk", &SavePointCloudToDisk<csd::FMCWLidarMeasurement>, (arg("path")))
+    .def("__len__", &csd::FMCWLidarMeasurement::size)
+    .def("__iter__", iterator<csd::FMCWLidarMeasurement>())
+    .def("__getitem__", +[](const csd::FMCWLidarMeasurement &self, size_t pos) -> csd::FMCWLidarDetection {
+      return self.at(pos);
+    })
+    .def("__setitem__", +[](csd::FMCWLidarMeasurement &self, size_t pos, const csd::FMCWLidarDetection &detection) {
+      self.at(pos) = detection;
+    })
+    .def(self_ns::str(self_ns::self))
+  ;
+
   class_<csd::SemanticLidarMeasurement, bases<cs::SensorData>, boost::noncopyable, std::shared_ptr<csd::SemanticLidarMeasurement>>("SemanticLidarMeasurement", no_init)
     .add_property("horizontal_angle", &csd::SemanticLidarMeasurement::GetHorizontalAngle)
     .add_property("channels", &csd::SemanticLidarMeasurement::GetChannelCount)
@@ -514,6 +556,20 @@ void export_sensor_data() {
   class_<csd::LidarDetection>("LidarDetection")
     .def_readwrite("point", &csd::LidarDetection::point)
     .def_readwrite("intensity", &csd::LidarDetection::intensity)
+    .def(self_ns::str(self_ns::self))
+  ;
+
+  class_<csd::FMCWLidarDetection>("FMCWLidarDetection")
+    .def_readwrite("azimuth", &csd::FMCWLidarDetection::azimuth)
+    .def_readwrite("elevation", &csd::FMCWLidarDetection::elevation)
+    .def_readwrite("range", &csd::FMCWLidarDetection::range)
+    .def_readwrite("intensity", &csd::FMCWLidarDetection::intensity)
+    .def_readwrite("velocity", &csd::FMCWLidarDetection::velocity)
+    .def_readwrite("cos_inc_angle", &csd::FMCWLidarDetection::cos_inc_angle)
+    .def_readwrite("object_idx", &csd::FMCWLidarDetection::object_idx)
+    .def_readwrite("object_tag", &csd::FMCWLidarDetection::object_tag)
+    .def_readwrite("point_idx", &csd::FMCWLidarDetection::point_idx)
+    .def_readwrite("beam_idx", &csd::FMCWLidarDetection::beam_idx)
     .def(self_ns::str(self_ns::self))
   ;
 

@@ -129,7 +129,8 @@ public class Carla :
       "Renderer",
       "ProceduralMeshComponent",
       "MeshDescription",
-      "Projects"
+      "Projects",
+      "UnrealYAML"
     });
 
     if (EnableCarSim)

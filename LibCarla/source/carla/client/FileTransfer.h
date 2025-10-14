@@ -8,6 +8,7 @@
 
 #include "carla/FileSystem.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <string_view>
 #include <string>

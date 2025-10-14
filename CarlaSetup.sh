@@ -105,7 +105,7 @@ else
     pushd ..
     if [ -z "$GIT_LOCAL_CREDENTIALS" ]
     then
-        UE5_URL=https://github.com/CarlaUnreal/UnrealEngine.git
+        UE5_URL=git@github.com:CarlaUnreal/UnrealEngine.git
     else
         GIT_CREDENTIALS_INFO=(${GIT_LOCAL_CREDENTIALS//@/ })
         GIT_LOCAL_USER=${GIT_CREDENTIALS_INFO[0]}

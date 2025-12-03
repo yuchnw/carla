@@ -180,7 +180,11 @@ void ARadar::SendLineTraces(float DeltaTime)
         );
 
         Rays[idx].Distance = OutHit.Distance * TO_METERS;
-      }
+        const FActorRegistry &Registry = GetEpisode().GetActorRegistry();
+        const FCarlaActor* view = Registry.FindCarlaActor(HittedActor.Get());
+        if(view)
+          Rays[idx].ActorId = view->GetActorId();
+        }
     });
   }
   GetWorld()->GetPhysicsScene()->GetPxScene()->unlockRead();
@@ -192,7 +196,8 @@ void ARadar::SendLineTraces(float DeltaTime)
         ray.RelativeVelocity,
         ray.AzimuthAndElevation.X,
         ray.AzimuthAndElevation.Y,
-        ray.Distance
+        ray.Distance,
+        ray.ActorId
       });
     }
   }

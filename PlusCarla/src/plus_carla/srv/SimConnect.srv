@@ -1,0 +1,25 @@
+float64 ego_lat
+float64 ego_lon
+float32 ego_z
+float32 ego_yaw
+float32 yaw_offset
+float32 ego_vx
+float32 ego_vy
+std_msgs/String obstacle_info
+---
+bool success
+sensor_msgs/CompressedImage front_left_camera
+sensor_msgs/CompressedImage front_right_camera
+sensor_msgs/CompressedImage front_long_center_camera
+sensor_msgs/CompressedImage front_center_camera
+sensor_msgs/CompressedImage left_front_camera
+sensor_msgs/CompressedImage left_side_camera
+sensor_msgs/CompressedImage left_rear_camera
+sensor_msgs/CompressedImage right_front_camera
+sensor_msgs/CompressedImage right_side_camera
+sensor_msgs/CompressedImage right_rear_camera
+sensor_msgs/PointCloud2 lidar
+radar_msgs/RadarTrackArray front_center_radar
+radar_msgs/RadarTrackArray rear_left_radar
+radar_msgs/RadarTrackArray rear_right_radar
+sensor_msgs/PointCloud2 radar_pointcloud

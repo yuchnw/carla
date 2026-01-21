@@ -886,12 +886,19 @@ void UActorBlueprintFunctionLibrary::MakeRadarDefinition(
   NoiseSeed.RecommendedValues = { TEXT("0") };
   NoiseSeed.bRestrictToRecommended = false;
 
+  // Radar type - Default/Altos.
+  FActorVariation RadarType;
+  RadarType.Id = TEXT("radar_type");
+  RadarType.Type = EActorAttributeType::String;
+  RadarType.RecommendedValues = { TEXT("Default") };
+
   Definition.Variations.Append({
     HorizontalFOV,
     VerticalFOV,
     Range,
     PointsPerSecond,
-    NoiseSeed});
+    NoiseSeed,
+    RadarType});
 
   Success = CheckActorDefinition(Definition);
 }
@@ -1020,7 +1027,9 @@ void UActorBlueprintFunctionLibrary::MakeLidarDefinition(
       DropOffIntensityLimit,
       DropOffAtZeroIntensity,
       StdDevLidar,
-      HorizontalFOV});
+      HorizontalFOV,
+      PatternFilePath,
+      PatternName});
   }
   else if (Id == "ray_cast_semantic") {
     Definition.Variations.Append({
@@ -1030,7 +1039,9 @@ void UActorBlueprintFunctionLibrary::MakeLidarDefinition(
       Frequency,
       UpperFOV,
       LowerFOV,
-      HorizontalFOV});
+      HorizontalFOV,
+      PatternFilePath,
+      PatternName});
   }
   else if (Id == "fmcw") {
     Definition.Variations.Append({
@@ -1811,6 +1822,7 @@ void UActorBlueprintFunctionLibrary::SetRadar(
       RetrieveActorAttributeToFloat("range", Description.Variations, 100.0f) * TO_CENTIMETERS);
   Radar->SetPointsPerSecond(
       RetrieveActorAttributeToInt("points_per_second", Description.Variations, 1500));
+  Radar->SetRadarType(RetrieveActorAttributeToString("radar_type", Description.Variations, "Default"));
 }
 
 #undef CARLA_ABFL_CHECK_ACTOR

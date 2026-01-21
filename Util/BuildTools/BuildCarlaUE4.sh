@@ -23,6 +23,7 @@ USE_HOUDINI=false
 
 GDB=
 RHI="-vulkan"
+# RHI="-RenderOffScreen"
 
 OPTS=`getopt -o h --long help,build,rebuild,launch,clean,hard-clean,gdb,opengl,carsim,pytorch,chrono,ros2,no-unity,editor-flags: -n 'parse-options' -- "$@"`
 

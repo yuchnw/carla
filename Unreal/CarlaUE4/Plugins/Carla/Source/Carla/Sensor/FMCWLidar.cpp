@@ -259,6 +259,25 @@ void AFMCWLidar::ComputeRawDetection(const FHitResult& HitInfo, const FVector& H
     Detection.intensity = exp(-Description.AtmospAttenRate * Detection.range);
     Detection.velocity = ComputeDopplerVelocity(HitPoint, HitVelocity);
 
+    // --- AEVA elevation weighting ---
+    const float ElevWeight = FMath::GetMappedRangeValueClamped(
+      FVector2D(-10.8f, 3.5f),
+      FVector2D(0.6f, 1.0f),
+      Detection.elevation
+    );
+
+    // --- Range falloff ---
+    float KeepProb = ElevWeight *
+                    FMath::Exp(-FMath::Square(Detection.range / AEVA_D0_METERS));
+
+    KeepProb = FMath::Clamp(KeepProb, AEVA_MIN_KEEP, 1.0f);
+
+    if (RandomEngine->GetUniformFloat() > KeepProb)
+    {
+      Detection.valid = false; // Drop this return
+      return;
+    }
+
     const FVector normal = -(HitPoint - SensorTransform.GetLocation()).GetSafeNormal();
     Detection.cos_inc_angle = FVector::DotProduct(normal, HitInfo.ImpactNormal);
 

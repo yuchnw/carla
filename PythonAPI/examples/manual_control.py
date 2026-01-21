@@ -65,6 +65,7 @@ from __future__ import print_function
 import glob
 import os
 import sys
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -294,6 +295,8 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+        spectator = self.world.get_spectator()
+        spectator.set_transform(self.player.get_transform())
 
         if self.sync:
             self.world.tick()
@@ -1026,8 +1029,10 @@ class RadarSensor(object):
         world = self._parent.get_world()
         self.debug = world.debug
         bp = world.get_blueprint_library().find('sensor.other.radar')
-        bp.set_attribute('horizontal_fov', str(35))
-        bp.set_attribute('vertical_fov', str(20))
+        bp.set_attribute('horizontal_fov', str(110))
+        bp.set_attribute('vertical_fov', str(23))
+        bp.set_attribute('range', str(80))
+        # bp.set_attribute('points_per_second', str(20000))
         self.sensor = world.spawn_actor(
             bp,
             carla.Transform(
@@ -1338,7 +1343,7 @@ def main():
     argparser.add_argument(
         '--filter',
         metavar='PATTERN',
-        default='vehicle.*',
+        default='vehicle.mercedes.sprinter',
         help='actor filter (default: "vehicle.*")')
     argparser.add_argument(
         '--generation',

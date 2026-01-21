@@ -1,0 +1,220 @@
+imu:
+  - x: 2.575
+    y: 0
+    z: 1.288
+sensors:
+  - name: front_long_center_camera
+    model: RGBCamera
+    type: camera
+    x: 2.47
+    y: 0.055
+    z: 1.12
+    roll: 0
+    pitch: 2.1
+    yaw: 0
+    config:
+      fov: 29.8
+  - name: front_center_camera
+    model: RGBCamera
+    type: camera
+    x: 2.46
+    y: 0
+    z: 1.12
+    roll: 0
+    pitch: 0
+    yaw: 0
+    config:
+      fov: 120
+  - name: front_left_camera
+    model: RGBCamera
+    type: camera
+    x: 2.365
+    y: -0.77
+    z: 1.12
+    roll: 0
+    pitch: 0
+    yaw: 0
+    config:
+      fov: 47
+  - name: front_right_camera
+    model: RGBCamera
+    type: camera
+    x: 2.45
+    y: 0.318
+    z: 1.12
+    roll: 0
+    pitch: 0
+    yaw: 0
+    config:
+      fov: 47
+  - name: left_front_camera
+    model: RGBCamera
+    type: camera
+    x: -0.077
+    y: -1.265
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: -38
+    config:
+      fov: 121.2
+  - name: left_side_camera
+    model: RGBCamera
+    type: camera
+    x: -0.154
+    y: -1.293
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: -93
+    config:
+      fov: 121.2
+  - name: left_rear_camera
+    model: RGBCamera
+    type: camera
+    x: -0.232
+    y: -1.283
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: -153
+    config:
+      fov: 121.2
+  - name: right_front_camera
+    model: RGBCamera
+    type: camera
+    x: -0.077
+    y: 1.265
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: 33
+    config:
+      fov: 121.2
+  - name: right_side_camera
+    model: RGBCamera
+    type: camera
+    x: -0.154
+    y: 1.293
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: 93
+    config:
+      fov: 121.2
+  - name: right_rear_camera
+    model: RGBCamera
+    type: camera
+    x: -0.232
+    y: 1.283
+    z: 1.487
+    roll: -90
+    pitch: -30
+    yaw: 153
+    config:
+      fov: 121.2
+  # Note: In CARLA, positive yaw is applied in the FMCW lidar's local XY plane,
+  # which makes it appear clockwise when viewed from above (Z-up). 
+  # This is opposite to the standard counter-clockwise convention.
+  # To tilt the sensor left in world coordinates, we need to negate the yaw.
+  - name: left_aeva_lidar
+    is_main_lidar: True
+    model: FMCW
+    type: lidar
+    x: 2.48
+    y: -0.097
+    z: 1.557
+    roll: 0
+    pitch: -3.2
+    yaw: -10
+    config:
+      channels: 64
+      range: 500
+  - name: right_aeva_lidar
+    model: FMCW
+    type: lidar
+    x: 2.48
+    y: 0.097
+    z: 1.557
+    roll: 0
+    pitch: -3.2
+    yaw: 10
+    config:
+      channels: 64
+      range: 500
+  - name: left_OS0_lidar
+    model: LiDAR
+    type: lidar
+    x: 0.722
+    y: -1.231
+    z: -0.145
+    roll: -35
+    pitch: 0
+    yaw: 0
+    config:
+      channels: 128
+      range: 75
+      horizontal_fov: 360
+      upper_fov: 45
+      lower_fov: -45
+      points_per_second: 1310000
+      pattern_name: Ouster0
+  - name: right_OS0_lidar
+    model: LiDAR
+    type: lidar
+    x: 0.722
+    y: 1.231
+    z: -0.145
+    roll: 35
+    pitch: 0
+    yaw: 0
+    config:
+      channels: 128
+      range: 75
+      horizontal_fov: 360
+      upper_fov: 45
+      lower_fov: -45
+      points_per_second: 1310000
+      pattern_name: Ouster0
+  - name: front_center_radar
+    model: Radar
+    type: radar
+    x: 4.408
+    y: -0.245
+    z: 0.715
+    roll: 0
+    pitch: 0
+    yaw: -25
+    config:
+      range: 320
+      horizontal_fov: 110
+      vertical_fov: 23
+      points_per_second: 100000
+  - name: left_rear_radar_sr
+    model: Radar
+    type: radar
+    x: 1.146
+    y: -1.296
+    z: -0.758
+    roll: 0
+    pitch: 0
+    yaw: -125
+    config:
+      range: 80
+      horizontal_fov: 110
+      vertical_fov: 23
+      points_per_second: 100000
+  - name: right_rear_radar_sr
+    model: Radar
+    type: radar
+    x: 1.146
+    y: 1.296
+    z: -0.758
+    roll: 0
+    pitch: 0
+    yaw: 125
+    config:
+      range: 80
+      horizontal_fov: 110
+      vertical_fov: 23
+      points_per_second: 100000

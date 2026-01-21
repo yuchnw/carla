@@ -223,6 +223,7 @@ def lidar_callback(data, lidar_queue):
     Prepares a point cloud with intensity and velocity
     colors ready to be consumed by Open3D.
     """
+    # print(f'Frame {data.frame}: {len(data)} points \n')
     point_cloud = np.frombuffer(data.raw_data,
                                 dtype=np.dtype([('azimuth', np.float32),
                                                 ('elevation', np.float32),
@@ -238,7 +239,7 @@ def lidar_callback(data, lidar_queue):
                                                 ('dynamic', bool)])).copy()
 
     # Negate the azimuth to account for scanning direction
-    point_cloud['azimuth'] = -point_cloud['azimuth']
+    # point_cloud['azimuth'] = -point_cloud['azimuth']
 
     point_count = len(point_cloud)
     if len(point_cloud) != data.get_point_count_channel() * data.channels != data.get_point_count_beam() * data.beams:
@@ -252,6 +253,8 @@ def lidar_callback(data, lidar_queue):
 def camera_callback(img, data, window_name):
     img = np.frombuffer(data.raw_data, dtype=np.dtype('uint8')).reshape(
         (data.height, data.width, 4))[:, :, :3][:, :, ::-1]
+    cv2.imshow('image window', img)
+    cv2.waitKey(10)
 
 
 def main(args):
@@ -307,17 +310,36 @@ def main(args):
 
         blueprint_library = world.get_blueprint_library()
         vehicle_bp = blueprint_library.filter(args.filter)[0]
-        vehicle_transform = random.choice(world.get_map().get_spawn_points())
+        vehicle_transform = carla.Transform(
+            carla.Location(3020.7081477660954, -2637.9011073207, 3),
+            # carla.Location(-2083.1795672688713, 2909.9611540967576, 3),
+            carla.Rotation(yaw=-225))
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         print('Vehicle Actor ID ', vehicle.id)
         vehicle.set_autopilot(args.no_autopilot)
 
+        # obs_dict = {2: [-2042.0727681544681, 2852.4937300304277, 5.704596991440528, 20.0], 3: [-2086.6173616033743, 2921.928974691768, 5.169178944532622, 20.0], 4: [-1998.251775824496, 2785.8437393168733, 6.624498876931463, 20.0], 5: [-2013.7517493950993, 2802.604620574764, 6.29984284480194, 22.0], 6: [-2081.237807903091, 2899.639264973237, 5.208984006354987, 23.0], 7: [-2128.975533259816, 2974.5922061931133, 5.077066586499007, 23.0], 8: [-2049.2656285017515, 2842.9362940517567, 5.704654287220041, 25.0], 9: [-2119.90187662643, 2953.2723617454267, 5.162170316670543, 25.0], 10: [-2029.5781177601675, 2819.6998169515364, 5.905806308782035, 23.0]}
+        # for id, data in obs_dict.items():
+        #     obsbp = random.choice(blueprint_library.filter('vehicle.*.*'))
+        #     obs_tf = carla.Transform(
+        #         carla.Location(x=data[0], y=data[1], z=3),
+        #         carla.Rotation(yaw=-57))
+        #     obs = world.spawn_actor(obsbp, obs_tf)
+        #     print('obs Actor ID ', obs.id)
+        #     obs.set_autopilot(args.no_autopilot)
+
         user_offset = carla.Location(args.x, args.y, args.z)
-        lidar_transform = carla.Transform(
-            carla.Location(x=1.04, z=1.69) + user_offset)
+        # IMU
+        imu_bp = world.get_blueprint_library().find('sensor.other.imu')
+        imu = world.spawn_actor(imu_bp, carla.Transform(carla.Location(x=0.597595, z=1.288), carla.Rotation(yaw=+00)), attach_to=vehicle)
+
+        lidar_transform = carla.Transform(carla.Location(x=2.48, y=-0.097, z=1.557), carla.Rotation(pitch=-3.2, yaw=10))
+        # lidar_transform = carla.Transform(
+        #     # carla.Location(x=3, z=2.69) + user_offset)
+        #     carla.Location(x=2.48, y=-0.097, z=1.557), carla.Rotation(pitch=-3.2, yaw=-10))
         lidar_bp = generate_lidar_blueprint(args, world, blueprint_library,
                                             sim_delta)
-        lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
+        lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=imu)
         lidar.listen(lambda data: lidar_callback(data, lidar_queue))
 
         vis = o3d.visualization.Visualizer()
@@ -383,10 +405,10 @@ def main(args):
                 print('Some of the sensor information is missed')
 
             process_time = time.time() - start_time
-            sys.stdout.write(
-                '\rWorld Time: %.2fs Frame: %05d Points: (%06d/%06d) FPS: %.2f'
-                % (timestamp, frame, len(
-                    pcd.points), point_count, 1.0 / process_time))
+            # sys.stdout.write(
+            #     '\rWorld Time: %.2fs Frame: %05d Points: (%06d/%06d) FPS: %.2f'
+            #     % (timestamp, frame, len(
+            #         pcd.points), point_count, 1.0 / process_time))
             sys.stdout.flush()
             start_time = time.time()
             frame += 1

@@ -47,9 +47,15 @@ done
 
 source $(dirname "$0")/Environment.sh
 
+export UE4_ROOT=/home/yuchen.wang/UnrealEngine_4.26
 export CC="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang"
 export CXX="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang++"
 export PATH="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin:$PATH"
+
+export CC=/usr/bin/clang-10
+export CXX=/usr/bin/clang++-10
+export CMAKE_C_COMPILER=$CC
+export CMAKE_CXX_COMPILER=$CXX
 
 CXX_TAG=c10
 
@@ -61,7 +67,7 @@ pushd ${CARLA_BUILD_FOLDER} >/dev/null
 
 LLVM_INCLUDE="$UE4_ROOT/Engine/Source/ThirdParty/Linux/LibCxx/include/c++/v1"
 LLVM_LIBPATH="$UE4_ROOT/Engine/Source/ThirdParty/Linux/LibCxx/lib/Linux/x86_64-unknown-linux-gnu"
-UNREAL_HOSTED_CFLAGS="--sysroot=$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/"
+# UNREAL_HOSTED_CFLAGS="--sysroot=$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/"
 
 # ==============================================================================
 # -- Get boost includes --------------------------------------------------------
@@ -719,6 +725,7 @@ cp ${PATCHELF_EXE} ${LIBCARLA_INSTALL_CLIENT_FOLDER}/bin/
 # -- Download libtorch and dependencies ----------------------------------------
 # ==============================================================================
 
+log "debug 1"
 if ${USE_PYTORCH} ; then
 
   LIBTORCH_BASENAME=libtorch
@@ -797,6 +804,7 @@ fi
 # -- Download Fast DDS and dependencies ----------------------------------------
 # ==============================================================================
 
+log "debug 2"
 FASTDDS_BASENAME=fast-dds
 FASTDDS_INSTALL_DIR=${PWD}/${FASTDDS_BASENAME}-install
 FASTDDS_INCLUDE=${FASTDDS_INSTALL_DIR}/include
@@ -875,7 +883,8 @@ fi
 # -- Generate Version.h --------------------------------------------------------
 # ==============================================================================
 
-CARLA_VERSION=$(get_git_repository_version)
+# CARLA_VERSION=$(get_git_repository_version)
+CARLA_VERSION=0.9.15
 
 log "CARLA version ${CARLA_VERSION}."
 

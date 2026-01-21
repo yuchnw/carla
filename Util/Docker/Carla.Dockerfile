@@ -1,19 +1,25 @@
-FROM carla-prerequisites:latest
+FROM ubuntu:22.04
 
-ARG GIT_BRANCH
+ENV DEBIAN_FRONTEND=noninteractive
 
-USER carla
-WORKDIR /home/carla
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libvulkan1 \
+    libgl1 \
+    libx11-6 \
+    libxcomposite1 \
+    libxrandr2 \
+    libxi6 \
+    libfreetype6 \
+    libpng16-16 \
+    python3 \
+    python3-pip \
+    xdg-user-dirs \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN cd /home/carla/ && \
-  if [ -z ${GIT_BRANCH+x} ]; then git clone --depth 1 https://github.com/carla-simulator/carla.git; \
-  else git clone --depth 1 --branch $GIT_BRANCH https://github.com/carla-simulator/carla.git; fi && \
-  cd /home/carla/carla && \
-  ./Update.sh && \
-  make CarlaUE4Editor && \
-  make PythonAPI && \
-  make build.utils && \
-  make package && \
-  rm -r /home/carla/carla/Dist
+# Copy CARLA packaged binary
+COPY Dist/CARLA_Shipping_0.9.15.2-6-g7b74a9853-dirty /opt/carla
+COPY ScanPatterns.yaml /opt/carla/
 
-WORKDIR /home/carla/carla
+RUN useradd -m carlauser && chown -R carlauser /opt/carla
+USER carlauser

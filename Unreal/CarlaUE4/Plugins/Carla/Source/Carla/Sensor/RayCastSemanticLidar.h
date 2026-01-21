@@ -12,6 +12,7 @@
 
 #include "Carla/Actor/ActorDefinition.h"
 #include "Carla/Sensor/LidarDescription.h"
+#include "Carla/Sensor/RayCastLidarPattern.h"
 #include "Carla/Actor/ActorBlueprintFunctionLibrary.h"
 
 #include <compiler/disable-ue4-macros.h>
@@ -71,6 +72,9 @@ protected:
   FLidarDescription Description;
 
   TArray<float> LaserAngles;
+
+  // Active scan pattern information
+  RayCastLidarPattern LidarPattern;
 
   std::vector<std::vector<FHitResult>> RecordedHits;
   std::vector<std::vector<bool>> RayPreprocessCondition;

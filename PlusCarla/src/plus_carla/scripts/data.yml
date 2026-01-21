@@ -1,0 +1,76 @@
+%YAML:1.0
+---
+type: stereo_camera
+car: navistar-pdgen2-i003sa
+date: "20250313"
+sensor_name: front_left_right_camera
+height: 1080
+width: 1920
+rotate: -1
+R: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1. ]
+T: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [ 1.0880000000000001e+00, 0., 0. ]
+D1: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ 0., 0., 0., 0., 0. ]
+R1: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1. ]
+D2: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ 0., 0., 0., 0., 0. ]
+R2: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1. ]
+M1: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 2.2078488499999999e+03, 0., 960., 0., 2.2078488499999999e+03,
+       540., 0., 0., 1. ]
+M2: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 2.2078488499999999e+03, 0., 960., 0., 2.2078488499999999e+03,
+       540., 0., 0., 1. ]
+P1: !!opencv-matrix
+   rows: 3
+   cols: 4
+   dt: d
+   data: [ 2.2078488499999999e+03, 0., 960., 0., 0.,
+       2.2078488499999999e+03, 540., 0., 0., 0., 1., 0. ]
+P2: !!opencv-matrix
+   rows: 3
+   cols: 4
+   dt: d
+   data: [ 2.2078488499999999e+03, 0., 960., 2.4021395487999998e+03, 0.,
+       2.2078488499999999e+03, 540., 0., 0., 0., 1., 0. ]
+Q: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 1., 0., 0., -960., 0., 1., 0., -540., 0., 0., 0.,
+       2.2078488499999999e+03, 0., 0., -9.1911764705882348e-01, 0. ]
+Tr_cam_to_imu: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 0., 0., 1., 2.3650000000000002e+00, -1., 0., 0.,
+       -7.7000000000000002e-01, 0., -1., 0., 1.1200000000000001e+00, 0.,
+       0., 0., 1. ]

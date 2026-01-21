@@ -1,19 +1,5 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2020 Computer Vision Center (CVC) at the Universitat Autonoma de
-# Barcelona (UAB).
-#
-# This work is licensed under the terms of the MIT license.
-# For a copy, see <https://opensource.org/licenses/MIT>.
-
-"""
-Script that render multiple sensors in the same pygame window
-
-By default, it renders four cameras, one LiDAR and one Semantic LiDAR.
-It can easily be configure for any different number of sensors. 
-To do that, check lines 290-308.
-"""
-
 import glob
 import os
 import sys
@@ -29,58 +15,38 @@ except IndexError:
     pass
 sys.path.append('/opt/ros/noetic/lib/python3/dist-packages')
 sys.path.append('/opt/plusai/lib/python')
+
 import argparse
 import carla
 import cv2
-import rospy
-import time
-import numpy as np
 import math
+import numpy as np
 import queue
 import random
+import rospy
+import logging
+import time
 from concurrent import futures
-from pyproj import Proj
-from plus_carla.srv import SimConnect, SimConnectResponse
-from sensor_msgs.msg import CompressedImage as Image
 from collections import defaultdict
 from geometry_msgs.msg import Point32
-
-from radar_msgs.msg import RadarTrackArray, RadarTrack
 from perception import obstacle_detection_pb2
-
-# import google.protobuf.text_format as protobuf_text_format
+from plus_carla.srv import SimConnect, SimConnectResponse
+from pyproj import Proj
+from radar_msgs.msg import RadarTrackArray, RadarTrack
+from sensor_msgs.msg import CompressedImage as Image
+from sensor_msgs.msg import PointCloud2
 
 import utils
-from bounding_box import ClientSideBoundingBoxes
-
-
-try:
-    import pygame
-    from pygame.locals import K_ESCAPE
-    from pygame.locals import K_q
-except ImportError:
-    raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
 vehicle = None
 obs_vehicle_list = {}
 yaw_offset = 0
 
 _vehicle_moved = False
-_sim_started = False
 
-BB_COLOR = (248, 64, 24)
 SPAWN_OBS = False
 SIM_STARTED = False
 
-class CustomTimer:
-    def __init__(self):
-        try:
-            self.timer = time.perf_counter
-        except AttributeError:
-            self.timer = time.time
-
-    def time(self):
-        return self.timer()
 
 class SensorManager:
     def __init__(self, world, sensor_type, transform, attached, sensor_options):
@@ -88,7 +54,6 @@ class SensorManager:
         self.world = world
         self.sensor = self.init_sensor(sensor_type, transform, attached, sensor_options)
         self.sensor_options = sensor_options
-        self.timer = CustomTimer()
         self.ros_image = None
         self.pc = None
         self.radar_tracks = defaultdict(list)
@@ -102,21 +67,11 @@ class SensorManager:
             width = 1080
             camera_bp.set_attribute('image_size_x', '%s' % height)
             camera_bp.set_attribute('image_size_y', '%s' % width)
-            # camera_bp.set_attribute('sensor_tick', '0.1')
 
             for key in sensor_options:
                 camera_bp.set_attribute(key, sensor_options[key])
             self.sensor_name = camera_bp.get_attribute('role_name').as_str()
 
-            # output_path = '/home/yuchen.wang/Documents/_out/%s' % (self.sensor_name)
-            # print(output_path)
-            # if not os.path.exists(output_path):
-            #     print("create")
-            #     os.mkdir(output_path)
-            # else:
-            #     files = glob.glob(output_path+'/*')
-            #     for f in files:
-            #         os.remove(f)
 
             camera = self.world.spawn_actor(camera_bp, transform, attach_to=attached)
             calibration = np.identity(3)
@@ -133,6 +88,7 @@ class SensorManager:
             lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
             self.M = utils.get_transformation_matrix_from_tf(transform)
 
+            lidar_bp.set_attribute('pattern_file', 'default')
             for key in sensor_options:
                 lidar_bp.set_attribute(key, sensor_options[key])
             self.sensor_name = lidar_bp.get_attribute('role_name').as_str()
@@ -149,23 +105,13 @@ class SensorManager:
             lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.fmcw')
             self.sensor_name = lidar_bp.get_attribute('role_name').as_str()
             self.M = utils.get_transformation_matrix_from_tf(transform)
-            executable_dir = os.path.dirname(os.path.abspath(__file__))
-            pattern_yaml_path = os.path.abspath(
-                os.path.join(executable_dir, "../../../../ScanPatterns.yaml"))
-            pattern_yaml_path = "/home/yuchen.wang/workspace/carla/ScanPatterns.yaml"
 
-            lidar_bp.set_attribute('pattern_file', pattern_yaml_path)
             lidar_bp.set_attribute('pattern_name', '64-19.2-Uniform')
             lidar_bp.set_attribute('motion_compensate', 'true')
 
             raycast_modes = {'frame': '0', 'line': '1', 'point': '2'}
             lidar_bp.set_attribute('raycast_mode', raycast_modes['frame'])
 
-            # if args.no_noise:
-            # lidar_bp.set_attribute('dropoff_general_rate', '0.0')
-            # lidar_bp.set_attribute('dropoff_intensity_limit', '1.0')
-            # lidar_bp.set_attribute('dropoff_zero_intensity', '0.0')
-            # else:
             lidar_bp.set_attribute('noise_stddev', '0.05')
             lidar_bp.set_attribute('dropoff_general_rate', '0.3')
 
@@ -186,12 +132,14 @@ class SensorManager:
             self.ground_removal_threshold = 0.1 if self.z_offset < -0.5 else 0.2
             for key in sensor_options:
                 radar_bp.set_attribute(key, sensor_options[key])
+            radar_bp.set_attribute('radar_type', 'Altos')
             self.sensor_name = radar_bp.get_attribute('role_name').as_str()
+            self.radar_type = radar_bp.get_attribute('radar_type').as_str()
             self.obstacles = {}
             self.v = [0., 0., 0.]
 
             radar = self.world.spawn_actor(radar_bp, transform, attach_to=attached)
-            radar.listen(self.radar_callback)
+            # radar.listen(self.radar_callback)
 
             return radar
 
@@ -213,16 +161,10 @@ class SensorManager:
 
     def camera_callback(self, image):
         image.convert(carla.ColorConverter.Raw)
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        # array = array[:, :, ::-1]
 
         if SIM_STARTED:
             self.img_queue.put(image)
-            # cv2.imwrite('/home/yuchen.wang/Documents/_out/%s/frame%06d.jpg' % (self.sensor_name, image.frame), array, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
 
-        # del array
         import gc
         gc.collect()
 
@@ -232,6 +174,10 @@ class SensorManager:
 
         self.pc = points.copy()
         self.pc[:,1] = -self.pc[:,1]
+        # Add velocity
+        velocity = np.zeros((self.pc.shape[0], 1), dtype=np.float32)
+        # Concatenate -> shape becomes (N, 5)
+        self.pc = np.concatenate([self.pc, velocity], axis=1)
         if SIM_STARTED:
             lidar_queue.put(self.pc)
 
@@ -259,8 +205,10 @@ class SensorManager:
             utils.spherical_to_cartesian(point_cloud['azimuth'], point_cloud['elevation'], 
                                    point_cloud['range'])).T
         intensity = point_cloud['intensity'].reshape(-1, 1)  # shape: (N, 1)
+        velocity = point_cloud['velocity'].reshape(-1, 1)  # shape: (N, 1)
 
-        points = np.hstack((points, intensity))  # shape: (N, 4)
+        points = np.hstack((points, velocity))  # shape: (N, 4)
+        points = np.hstack((points, intensity))  # shape: (N, 5)
         if SIM_STARTED:
             lidar_queue.put(points)
 
@@ -270,11 +218,13 @@ class SensorManager:
         self.radar.header = rospy.Header()
         self.radar.header.frame_id = "radar"
         self.cur_tf = self.sensor.get_transform()
+        points = []
 
         for detection in data:
             id = detection.actor_id
-            if id not in self.obstacles.keys():
-                continue
+            # if id not in self.obstacles.keys():
+            #     continue
+            # print(detection.actor_id)
 
             # Convert from spherical to cartesian
             depth = detection.depth
@@ -282,26 +232,38 @@ class SensorManager:
             altitude = detection.altitude
             velocity = detection.velocity
 
-            obs = self.obstacles[id]
-            obs_pos = np.array([obs[0], obs[1], 0])
-            obs_v = np.array([obs[2], obs[3], 0])
-            radar_pos = np.array([self.cur_tf.location.x, self.cur_tf.location.y, self.cur_tf.location.z])
-            radar_v = np.array([self.v[0], self.v[1], self.v[2]])
-            velocity = utils.calculate_radar_speed(obs_pos, obs_v, radar_pos, radar_v)
-
             x = depth * math.cos(azimuth) * math.cos(-altitude)
             y = depth * math.sin(-azimuth) * math.cos(altitude)
             z = depth * math.sin(altitude)
 
-            vx = velocity * math.cos(azimuth) * math.cos(-altitude)
-            vy = velocity * math.sin(-azimuth) * math.cos(altitude)
-
             if abs(1.288+self.z_offset+z) < self.ground_removal_threshold:
                 continue
-            if depth < 1:
-                continue
 
-            self.radar_tracks[id].append({'x': x, 'y': y, 'z': z, 'vx': vx, 'vy': vy})
+            if id in self.obstacles.keys():
+        #     continue
+                obs = self.obstacles[id]
+                obs_pos = np.array([obs[0], obs[1], 0])
+                obs_v = np.array([obs[2], obs[3], 0])
+                radar_pos = np.array([self.cur_tf.location.x, self.cur_tf.location.y, self.cur_tf.location.z])
+                radar_v = np.array([self.v[0], self.v[1], self.v[2]])
+                velocity = utils.calculate_radar_speed(obs_pos, obs_v, radar_pos, radar_v)
+
+                vx = velocity * math.cos(azimuth) * math.cos(-altitude)
+                vy = velocity * math.sin(-azimuth) * math.cos(altitude)
+            # if depth < 1:
+            #     continue
+
+                self.radar_tracks[id].append({'x': x, 'y': y, 'z': z, 'vx': vx, 'vy': vy})
+
+            if self.radar_type == "Altos":
+                # point = np.array([x, y, z, velocity]).T
+                points.append((x, y, z, velocity))
+                # print(points)
+
+        if self.radar_type == "Altos":
+            self.pc = utils.form_lidar_msg(points, "Radar")
+            self.radar = RadarTrackArray()
+            return
 
         for track_id, points in self.radar_tracks.items():
             radar_track = RadarTrack()
@@ -325,29 +287,8 @@ class SensorManager:
 
             self.radar.tracks.append(radar_track)
 
-    def render(self, bounding_boxes):
-        if self.surface is not None:
-            for bbox in bounding_boxes:
-                points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
-                # draw lines
-                # base
-                pygame.draw.line(self.surface, BB_COLOR, points[0], points[1])
-                pygame.draw.line(self.surface, BB_COLOR, points[0], points[1])
-                pygame.draw.line(self.surface, BB_COLOR, points[1], points[2])
-                pygame.draw.line(self.surface, BB_COLOR, points[2], points[3])
-                pygame.draw.line(self.surface, BB_COLOR, points[3], points[0])
-                # top
-                pygame.draw.line(self.surface, BB_COLOR, points[4], points[5])
-                pygame.draw.line(self.surface, BB_COLOR, points[5], points[6])
-                pygame.draw.line(self.surface, BB_COLOR, points[6], points[7])
-                pygame.draw.line(self.surface, BB_COLOR, points[7], points[4])
-                # base-top
-                pygame.draw.line(self.surface, BB_COLOR, points[0], points[4])
-                pygame.draw.line(self.surface, BB_COLOR, points[1], points[5])
-                pygame.draw.line(self.surface, BB_COLOR, points[2], points[6])
-                pygame.draw.line(self.surface, BB_COLOR, points[3], points[7])
-            # offset = self.display_man.get_display_offset(self.display_pos)
-            # self.display_man.display.blit(self.surface, offset)
+        # If use default radar model pointcloud would be disabled
+        self.pc = PointCloud2()
 
     def destroy(self):
         self.sensor.destroy()
@@ -361,16 +302,12 @@ def wait_for_image(cam):
 
 def handle_plus_vehicle_control(req):
     global vehicle, obs_vehicle_list, SPAWN_OBS, yaw_offset, SIM_STARTED
-    # global_vars = {key: value for key, value in globals().items() if not key.startswith("__")}
-    # for var_name, var_obj in global_vars.items():
-    #     print(f"{var_name}: {var_obj}")
 
     if not vehicle:
         rospy.logerr("Vehicle not initialized!")
         return SimConnectResponse(False, Image(), Image(), Image(), Image(), Image(), Image(), Image(), Image(), Image(), None, None, None, None)
     if not SIM_STARTED:
         SIM_STARTED = True
-    # print("handle start: {}".format(time.time()))
 
     # Move the vehicle
     ego_lat = req.ego_lat
@@ -404,8 +341,6 @@ def handle_plus_vehicle_control(req):
         obs_for_radar[cur_obs.id] = [cur_x, cur_y, cur_motion.vx, cur_motion.vy]
         cur_obs.set_transform(carla.Transform(new_loc, new_rot))
 
-    # print("done processing obs: {}".format(time.time()))
-
     ## Wait till all sensor queues are ready
     with futures.ThreadPoolExecutor() as executor:
         executor.map(wait_for_image, camera_list)
@@ -414,16 +349,10 @@ def handle_plus_vehicle_control(req):
         radar.obstacles = obs_for_radar
         radar.v = [ego_vx, ego_vy, 0.]
 
-    # Get bounding boxes
-    bounding_boxes_map = {}
-    # bounding_boxes_map[s_fc.sensor_name] = []
-    for s in camera_list:
-        bounding_boxes_map[s.sensor_name] = []
-        # bounding_boxes_map[s.sensor_name] = ClientSideBoundingBoxes.get_bounding_boxes(obs_vehicle_list, s.sensor)
-
     return SimConnectResponse(True,
                               front_left_camera.ros_image,
                               front_right_camera.ros_image,
+                              front_long_center_camera.ros_image if 'front_long_center_camera' in globals() else Image(),
                               front_center_camera.ros_image,
                               left_front_camera.ros_image,
                               left_side_camera.ros_image,
@@ -435,6 +364,7 @@ def handle_plus_vehicle_control(req):
                               front_center_radar.radar,
                               left_rear_radar_sr.radar,
                               right_rear_radar_sr.radar,
+                              front_center_radar.pc
                               )
 
 def run_simulation(args, client):
@@ -442,24 +372,45 @@ def run_simulation(args, client):
     and connecting to the carla client passed.
     """
     vehicle_list = []
-    timer = CustomTimer()
-
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
 
     global vehicle, obs_vehicle_list
+    global camera_list, lidar_list, radar_list
+    camera_list = []
+    lidar_list = []
+    radar_list = []
 
     try:
         # Connect to simulator node
         rospy.init_node('plus_carla_server')
         s = rospy.Service('plus_carla', SimConnect, handle_plus_vehicle_control)
 
-        # Getting the world and
+        # Write logging info into file
+        os.makedirs(args.log_dir, exist_ok=True)
+        path = os.path.join(args.log_dir, "carla_client.log")
+        logging.basicConfig(
+            filename=path,
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+        )
+
+        # Getting the world and loading map
+        if args.map != "default":
+            client.load_world(args.map)
         world = client.get_world()
+        # Setting geo proj str
+        utils.set_geo_ref(args.proj_str)
+
+        ## TODO
+        import xml.etree.ElementTree as ET
+
+        xodr = world.get_map().to_opendrive()
+        root = ET.fromstring(xodr)
+
+        proj_string = root.find("header/geoReference").text.strip()
+        print("PROJ string: {}".format(proj_string))
+
         original_settings = world.get_settings()
         sp = utils.ScenarioProcessor(args.scenario_file)
-
-        # world.set_weather(carla.WeatherParameters.WetCloudyNoon)
 
         if args.sync:
             traffic_manager = client.get_trafficmanager(8000)
@@ -475,25 +426,22 @@ def run_simulation(args, client):
         bp = world.get_blueprint_library().filter('vehicle.mercedes.sprinter')[0]
         init_x, init_y = sp.get_ego()
         transform = carla.Transform(
-            carla.Location(init_x, init_y, 3), #(29.785196679, -98.030244176)
+            carla.Location(init_x, init_y, 3),
             carla.Rotation(yaw=args.init_yaw))
         spectator.set_transform(transform)
-        vehicle = world.spawn_actor(bp, transform)
-        # vehicle.set_light_state(carla.VehicleLightState(carla.VehicleLightState.HighBeam))
+        vehicle = world.try_spawn_actor(bp, transform)
         vehicle_list.append(vehicle)
-        box = vehicle.bounding_box
-        print(box.extent)
+
+        print("---test1")
 
         # IMU
         imu_bp = world.get_blueprint_library().find('sensor.other.imu')
         imu = world.spawn_actor(imu_bp, carla.Transform(carla.Location(x=0.497595, z=1.288), carla.Rotation(yaw=+00)), attach_to=vehicle)
 
         sc = utils.SensorConfig(args.sensor_config)
-        global camera_list, lidar_list, radar_list
-        camera_list = []
-        lidar_list = []
-        radar_list = []
         for s in sc.sensor_config['sensors']:
+            if s['model'] == 'FMCW' or (s['model'] == 'LiDAR' and 'pattern_name' in s['config'].keys()):
+                s['config']['pattern_file'] = args.lidar_scan_pattern
             sensor = SensorManager(world, s['model'], carla.Transform(carla.Location(x=s['x'], y=s['y'], z=s['z']),
                                                                      carla.Rotation(roll=s['roll'], pitch=s['pitch'], yaw=s['yaw'])),
                                    imu, s['config'])
@@ -506,34 +454,30 @@ def run_simulation(args, client):
 
             globals()[s['name']] = sensor
 
+        print("---test2")
+
         # Spawning obstacles
         obs_map = sp.obs_map
         tm = client.get_trafficmanager()
 
-        obs_blueprints = world.get_blueprint_library().filter('vehicle.*.*')
-        filtered_obs_blueprints = [bp for bp in obs_blueprints if not (bp.id.startswith('vehicle.bicycle.') \
-        or bp.id.startswith('vehicle.bh.') or bp.id.startswith('vehicle.diamondback.') \
-        or bp.id.startswith('vehicle.gazelle.') or bp.id.startswith('vehicle.vespa.'))]
         for obs_id, state in obs_map.items():
             obsyaw = args.init_yaw
-            if obs_id > args.opposite_lane_obs_id:
+            if args.opposite_lane_obs_id != -1 and obs_id > args.opposite_lane_obs_id:
                 obsyaw = args.init_yaw + 180
             obs_tf = carla.Transform(
                 carla.Location(state[0], state[1], 2),
                 carla.Rotation(yaw=obsyaw))
-            bp_random = random.choice(filtered_obs_blueprints)
-            obs = world.try_spawn_actor(bp_random, obs_tf)
-            # tm.set_desired_speed(obs, state[3] * 3.6)
+            obs_vehicle = utils.get_blueprint_from_category(state[4])
+            obs_bp = world.get_blueprint_library().filter(obs_vehicle)[0]
+            obs = world.try_spawn_actor(obs_bp, obs_tf)
             if obs is not None:
                 print('created {} with id = {}, carla_id = {}, target speed {}'.format(obs.type_id, obs_id, obs.id, state[3]))
                 obs.set_autopilot(False)
-                # obs.set_light_state(carla.VehicleLightState(carla.VehicleLightState.HighBeam))
                 obs_vehicle_list[obs_id] = obs
-            # time.sleep(1)
 
-        clock = pygame.time.Clock()
         #Simulation loop
         call_exit = False
+        print("---test3")
         while not rospy.is_shutdown():
             # Carla Tick
             if args.sync:
@@ -541,30 +485,43 @@ def run_simulation(args, client):
             else:
                 world.wait_for_tick()
 
+            print("---test4")
+
             try:
                 if SIM_STARTED:
-                    left_latest = left_aeva_lidar.lidar_queue.get(True, 1.0)
-                    right_latest_b = utils.transform_between_frames(right_aeva_lidar.lidar_queue.get(True, 1.0), right_aeva_lidar.M, left_aeva_lidar.M)
-                    left_os0_b = utils.transform_between_frames(left_OS0_lidar.lidar_queue.get(True, 1.0), left_OS0_lidar.M, left_aeva_lidar.M, offset_y=2.462, offset_z=0.29)
-                    right_os0_b = utils.transform_between_frames(right_OS0_lidar.lidar_queue.get(True, 1.0), right_OS0_lidar.M, left_aeva_lidar.M, offset_y=-2.462, offset_z=0.29)
-                    combined_points = np.vstack((left_latest, right_latest_b, left_os0_b, right_os0_b))
+                    # left_latest = left_aeva_lidar.lidar_queue.get(True, 1.0)
+                    # right_latest_b = utils.transform_between_frames(right_aeva_lidar.lidar_queue.get(True, 1.0), right_aeva_lidar.M, left_aeva_lidar.M)
+                    # left_os0_b = utils.transform_between_frames(left_OS0_lidar.lidar_queue.get(True, 1.0), left_OS0_lidar.M, left_aeva_lidar.M, offset_y=2.462, offset_z=0.29)
+                    # right_os0_b = utils.transform_between_frames(right_OS0_lidar.lidar_queue.get(True, 1.0), right_OS0_lidar.M, left_aeva_lidar.M, offset_y=-2.462, offset_z=0.29)
+                    # combined_points = np.vstack((left_latest, right_latest_b, left_os0_b, right_os0_b))
 
-                    left_aeva_lidar.latest_lidar = utils.form_lidar_msg(combined_points)
+                    # left_aeva_lidar.latest_lidar = utils.form_lidar_msg(combined_points, "Lidar")
                     time.sleep(0.005)  # This can fix Open3D jittering issues.
             except queue.Empty:
-                print("Timed out waiting for left LiDAR")
-
-            clock.tick(20)  # limit to 30 FPS
+                print("Timed out waiting for LiDAR")
 
         rospy.spin()
 
     finally:
+        [sensor.destroy() for sensor in camera_list + lidar_list + radar_list]
         client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_list])
+        client.apply_batch([carla.command.DestroyActor(x) for x in obs_vehicle_list.keys()])
 
         world.apply_settings(original_settings)
 
+def main(args):
+    try:
+        client = carla.Client(args.host, args.port)
+        client.set_timeout(5.0)
+        run_simulation(args, client)
 
-def main():
+        time.sleep(1)
+
+    except KeyboardInterrupt:
+        print('\nCancelled by user. Bye!')
+
+
+if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         description='CARLA Simulator')
     argparser.add_argument(
@@ -589,11 +546,6 @@ def main():
         help='Asynchronous mode execution')
     argparser.set_defaults(sync=True)
     argparser.add_argument(
-        '--res',
-        metavar='WIDTHxHEIGHT',
-        default='1920x1080',
-        help='window resolution')
-    argparser.add_argument(
         '--scenario-file',
         help='scenario file including ego and obstacle agents init poses',
         required=True)
@@ -608,21 +560,27 @@ def main():
     argparser.add_argument(
         '--opposite-lane-obs-id',
         type=int,
-        default=22,
+        required=True,
         help='ID index threshold for obstacles on the opposite lane')
+    argparser.add_argument(
+        '--lidar-scan-pattern',
+        type=str,
+        default="/opt/carla/ScanPatterns.yaml",
+        help='Aeva lidar scan pattern file path(should be able to be accessed by CARLA server)')
+    argparser.add_argument(
+        '--map',
+        type=str,
+        default="default",
+        help='Specify which map to run the CARLA simulation on, it should be packed into CARLA server')
+    argparser.add_argument(
+        '--proj-str',
+        type=str,
+        help='XODR projection string, used for converting lat/lon to CARLA x/y')
+    argparser.add_argument(
+        '--log-dir',
+        type=str,
+        default='/opt/plusai/log',
+        help='log file folder path')
 
     args = argparser.parse_args()
-
-    try:
-        client = carla.Client(args.host, args.port)
-        client.set_timeout(5.0)
-        run_simulation(args, client)
-
-        time.sleep(1)
-
-    except KeyboardInterrupt:
-        print('\nCancelled by user. Bye!')
-
-
-if __name__ == '__main__':
-    main()
+    main(args)

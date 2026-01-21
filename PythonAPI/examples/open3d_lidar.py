@@ -176,8 +176,11 @@ def main(arg):
         world.apply_settings(settings)
 
         blueprint_library = world.get_blueprint_library()
-        vehicle_bp = blueprint_library.filter(arg.filter)[0]
-        vehicle_transform = random.choice(world.get_map().get_spawn_points())
+        vehicle_bp = blueprint_library.filter(args.filter)[0]
+        vehicle_transform = carla.Transform(
+            carla.Location(3020.7081477660954, -2637.9011073207, 3),
+            # carla.Location(-2083.1795672688713, 2909.9611540967576, 3),
+            carla.Rotation(yaw=-225))
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         vehicle.set_autopilot(arg.no_autopilot)
 
@@ -186,6 +189,11 @@ def main(arg):
         user_offset = carla.Location(arg.x, arg.y, arg.z)
         lidar_transform = carla.Transform(carla.Location(x=-0.5, z=1.8) + user_offset)
 
+        # IMU
+        imu_bp = world.get_blueprint_library().find('sensor.other.imu')
+        imu = world.spawn_actor(imu_bp, carla.Transform(carla.Location(x=0.597595, z=1.288), carla.Rotation(yaw=+00)), attach_to=vehicle)
+
+        lidar_transform = carla.Transform(carla.Location(x=2.48, y=-0.097, z=1.557), carla.Rotation(pitch=-3.2, yaw=40))
         lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
 
         point_list = o3d.geometry.PointCloud()

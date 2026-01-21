@@ -105,4 +105,8 @@ class CARLA_API AFMCWLidar : public ASensor {
   /// beta = (1 - dropoff_zero_intensity)
   float DropOffAlpha = 0.0f;
   float DropOffBeta = 0.0f;
+
+  //// Range and elevation falloff parameters
+  float AEVA_D0_METERS = 55.0f;   // distance falloff (main knob)
+  float AEVA_MIN_KEEP = 0.02f;
 };

@@ -79,11 +79,13 @@ void AOpenDriveGenerator::GenerateRoadMesh()
 
   auto& CarlaMap = UCarlaStatics::GetGameMode(GetWorld())->GetMap();
   const auto Meshes = CarlaMap->GenerateChunkedMesh(Parameters);
+  int mesh_id = 1;
   for (const auto &Mesh : Meshes) {
     if (!Mesh->GetVertices().size())
     {
       continue;
     }
+    // UE_LOG(LogCarla, Error, TEXT("One Mesh loaded!"));
     AProceduralMeshActor* TempActor = GetWorld()->SpawnActor<AProceduralMeshActor>();
     UProceduralMeshComponent *TempPMC = TempActor->MeshComponent;
     TempPMC->bUseAsyncCooking = true;
@@ -102,6 +104,13 @@ void AOpenDriveGenerator::GenerateRoadMesh()
         true); // Create collision
 
     ActorMeshList.Add(TempActor);
+    // after mesh is generated
+    {
+        // std::ofstream file("/home/yuchen.wang/Documents/tmp_nurec/gomentum_xodr_0409_" + std::to_string(mesh_id) + ".obj");
+        // file << Mesh->GenerateOBJ();
+        // file.close();
+        mesh_id++;
+    }
   }
 
   if(!Parameters.enable_mesh_visibility)
@@ -170,6 +179,7 @@ void AOpenDriveGenerator::BeginPlay()
   Super::BeginPlay();
 
   const FString XodrContent = UOpenDrive::GetXODR(GetWorld());
+  UE_LOG(LogTemp, Log, TEXT("Enter Generator ------"));
   LoadOpenDrive(XodrContent);
 
   GenerateAll();

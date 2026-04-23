@@ -1,0 +1,234 @@
+- camera_params:
+    name: "front_center"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+        # 0.0,
+        # 0.0002264272923579731,
+        # 7.509162412435323e-07,
+        # -8.442763113899608e-10,
+        # 3.8711437388792216e-13
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    # angle_to_pixeldist_poly: [0,
+    #                           4416.428733418926,
+    #                           0,
+    #                           1472.142911139642,
+    #                           0,
+    #                           588.8571644558567]
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [2.46, 0, 2.408]
+  rotation: [0, 0, 0] # pitch/yaw/roll
+
+- camera_params:
+    name: "front_left"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_rear_left_70fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.0003188688133377582,
+      8.438597043358698e-10,
+      -4.297672894643112e-12,
+      4.260951383801238e-15,
+      -1.207963591567193e-18
+    ]
+    reference_poly: 2
+    angle_to_pixeldist_poly: [
+      0.0,
+      3137.89453125,
+      -53.11967849731445,
+      546.9815673828125,
+      -1547.9012451171875,
+      1321.900146484375
+    ]
+    max_angle: 0.7099
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+    linear_cde: [
+        0.9998062252998352,
+        1.4195707080943976e-05,
+        5.1006791181862354e-05
+    ]
+  translation: [2.365, 0.77, 2.408]
+  rotation: [0, 0, 0]
+
+- camera_params:
+    name: "front_right"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    principal_point_x: 1920
+    principal_point_y: 1080
+    logical_id: "camera_rear_right_70fov"
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.0003188688133377582,
+      8.438597043358698e-10,
+      -4.297672894643112e-12,
+      4.260951383801238e-15,
+      -1.207963591567193e-18
+    ]
+    reference_poly: 2
+    angle_to_pixeldist_poly: [
+      0.0,
+      3137.89453125,
+      -53.11967849731445,
+      546.9815673828125,
+      -1547.9012451171875,
+      1321.900146484375
+    ]
+    max_angle: 0.7099
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+    linear_cde: [
+        0.9998062252998352,
+        1.4195707080943976e-05,
+        5.1006791181862354e-05
+    ]
+  translation: [2.45, -0.318, 2.408]
+  rotation: [0, 0, 0]
+
+- camera_params:
+    name: "left_front"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.077, 1.265, 2.775]
+  rotation: [30, 38, -90]
+
+- camera_params:
+    name: "left_side"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.154, 1.293, 2.775]
+  rotation: [30, 93, -90]
+
+- camera_params:
+    name: "left_rear"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.232, 1.283, 2.775]
+  rotation: [30, 153, -90]
+
+- camera_params:
+    name: "right_front"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.077, -1.265, 2.775]
+  rotation: [30, -33, -90]
+
+- camera_params:
+    name: "right_side"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.154, -1.293, 2.775]
+  rotation: [30, -93, -90]
+
+- camera_params:
+    name: "right_rear"
+    camera_type: ftheta
+    resolution_w: 3840
+    resolution_h: 2160
+    logical_id: "camera_front_wide_120fov"
+    principal_point_x: 1920
+    principal_point_y: 1080
+    pixeldist_to_angle_poly: [
+      0.0,
+      0.00053944590035826,
+      2.46685849525363e-09,
+      2.6309770334576e-12,
+      -2.44043479933324e-16
+    ]
+    reference_poly: 1
+    angle_to_pixeldist_poly: []
+    max_angle: pi
+    shutter_type: ROLLING_TOP_TO_BOTTOM
+  translation: [-0.232, -1.283, 2.775]
+  rotation: [30, -153, -90]

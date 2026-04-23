@@ -206,40 +206,40 @@ else
 fi
 
 # Download the dataset from HuggingFace
-echo "Checking HuggingFace dataset..."
-if check_hf_dataset; then
-    echo "HuggingFace dataset already exists, skipping download."
-else
-    echo "Installing HuggingFace CLI..."
-    python -m pip install --upgrade huggingface_hub || {
-        echo "Error: Failed to install HuggingFace CLI"
-        exit 1
-    }
+# echo "Checking HuggingFace dataset..."
+# if check_hf_dataset; then
+#     echo "HuggingFace dataset already exists, skipping download."
+# else
+#     echo "Installing HuggingFace CLI..."
+#     python -m pip install --upgrade huggingface_hub || {
+#         echo "Error: Failed to install HuggingFace CLI"
+#         exit 1
+#     }
 
-    # Get and validate HuggingFace PAT
-    hf_pat=$(get_hf_pat)
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
+#     # Get and validate HuggingFace PAT
+#     hf_pat=$(get_hf_pat)
+#     if [ $? -ne 0 ]; then
+#         exit 1
+#     fi
 
-    # Strip any newlines or whitespace from the token
-    hf_pat=$(echo "$hf_pat" | tr -d '\n\r' | xargs)
+#     # Strip any newlines or whitespace from the token
+#     hf_pat=$(echo "$hf_pat" | tr -d '\n\r' | xargs)
 
-    echo "Downloading the dataset from HuggingFace using CLI..."
+#     echo "Downloading the dataset from HuggingFace using CLI..."
     
-    # Login to HuggingFace using the token
-    echo "$hf_pat" | hf auth login --token "$hf_pat" || {
-        echo "Error: Failed to authenticate with HuggingFace"
-        exit 1
-    }
+#     # Login to HuggingFace using the token
+#     echo "$hf_pat" | hf auth login --token "$hf_pat" || {
+#         echo "Error: Failed to authenticate with HuggingFace"
+#         exit 1
+#     }
     
-    # Download the dataset using HuggingFace CLI
-    echo "Downloading dataset with HuggingFace CLI..."
-    hf download nvidia/PhysicalAI-Autonomous-Vehicles-NuRec --repo-type dataset --local-dir PhysicalAI-Autonomous-Vehicles-NuRec || {
-        echo "Error: Failed to download the NuRec dataset from HuggingFace"
-        exit 1
-    }
-fi
+#     # Download the dataset using HuggingFace CLI
+#     echo "Downloading dataset with HuggingFace CLI..."
+#     hf download nvidia/PhysicalAI-Autonomous-Vehicles-NuRec --repo-type dataset --local-dir PhysicalAI-Autonomous-Vehicles-NuRec || {
+#         echo "Error: Failed to download the NuRec dataset from HuggingFace"
+#         exit 1
+#     }
+# fi
 
 # Set the NuRec image path
 NUREC_IMAGE="docker.io/carlasimulator/nvidia-nurec-grpc:0.2.0"
@@ -287,8 +287,8 @@ python -m pip install pygame numpy nvidia-nvjpeg-cu12 imageio|| {
 # Install Carla Wheel
 echo "Installing Carla Wheel..."
 
-WHEEL=$(ls ../../../carla/dist/carla-0.9.16-cp310-cp310-*.whl | head -n 1)
-python -m pip install ${WHEEL} || {
+WHEEL=$(ls /home/yuchen.wang/workspace/carla/PythonAPI/carla/dist/carla-0.9.16-cp310-cp310-*.whl | head -n 1)
+python -m pip install --force-reinstall ${WHEEL} || {
     echo "Error: Failed to install Carla Wheel"
     exit 1
 }
@@ -311,6 +311,8 @@ python nre/grpc/update_generated.py || {
     echo "Error: Failed to update generated GRPC files"
     exit 1
 }
+
+python -m pip install opencv-python
 
 # Make the script executable
 chmod +x "$0"

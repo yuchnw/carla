@@ -56,6 +56,7 @@ from nre.grpc.protos.sensorsim_pb2 import (
     FthetaCameraParam,
     OpenCVFisheyeCameraParam,
     ShutterType,
+    LinearCde,
 )
 from track import Track
 
@@ -120,23 +121,23 @@ def generate_request(
     camera_pose = t_carla_nurec @ camera_pose
     dynamic_objects = []
     # select all actors that have attributes and have track_id attribute
-    for actor in actors:
-        if actor.id in active_actors:
-            track_id = active_actors[actor.id]
-            if not track_id in controllable_tracks:
-                continue
-            pose = actor_to_grpc_pose(
-                actor, t_carla_nurec, blueprint_library, actor_blueprints
-            )
-            dynamic_objects.append(
-                DynamicObject(
-                    track_id=track_id,
-                    pose_pair=PosePair(
-                        start_pose=pose,
-                        end_pose=pose,
-                    ),
-                )
-            )
+    # for actor in actors:
+    #     if actor.id in active_actors:
+    #         track_id = active_actors[actor.id]
+    #         if not track_id in controllable_tracks:
+    #             continue
+    #         pose = actor_to_grpc_pose(
+    #             actor, t_carla_nurec, blueprint_library, actor_blueprints
+    #         )
+    #         dynamic_objects.append(
+    #             DynamicObject(
+    #                 track_id=track_id,
+    #                 pose_pair=PosePair(
+    #                     start_pose=pose,
+    #                     end_pose=pose,
+    #                 ),
+    #             )
+    #         )
     return RGBRenderRequest(
         scene_id=scene_id,
         resolution_h=int(camera_spec.resolution_h * scale),
@@ -273,6 +274,7 @@ def dict_to_camera_spec(params: dict) -> CameraSpec:
     params.setdefault("pixeldist_to_angle_poly", [])
     params.setdefault("angle_to_pixeldist_poly", [])
     params.setdefault("max_angle", np.pi)
+    params.setdefault("linear_cde", LinearCde())
 
     camera_param = FthetaCameraParam(
         principal_point_x=params["principal_point_x"],
@@ -281,6 +283,7 @@ def dict_to_camera_spec(params: dict) -> CameraSpec:
         pixeldist_to_angle_poly=params["pixeldist_to_angle_poly"],
         angle_to_pixeldist_poly=params["angle_to_pixeldist_poly"],
         max_angle=params["max_angle"],
+        linear_cde=params["linear_cde"],
     )
 
     return CameraSpec(
@@ -571,6 +574,10 @@ class NurecScenario(TimeKeeper, NuRecRenderService):
             raise RuntimeError("No ego poses available in scenario")
         ego_spawn = self.t_scenario_carla @ ego_poses[0]
         carla_ego_pose = mat_to_carla_transform(ego_spawn)
+        print(self.t_scenario_carla)
+        print(carla_ego_pose)
+        # print(ego_poses[0])
+        print("===")
 
         ego_instance = world.try_spawn_actor(ego_bp_obj, carla_ego_pose)
 

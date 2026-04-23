@@ -17,7 +17,7 @@ OPTS=`getopt -o h --long help,config:,rebuild,clean,rss,carsim,python-version:,b
 
 eval set -- "$OPTS"
 
-PY_VERSION_LIST=3
+PY_VERSION_LIST=3.10
 TARGET_WHEEL_PLATFORM=
 
 while [[ $# -gt 0 ]]; do
@@ -59,7 +59,8 @@ done
 export CC="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang"
 export CXX="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang++"
 export PATH="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin:$PATH"
-
+export CC=/usr/bin/clang-10
+export CXX=/usr/bin/clang++-10
 source $(dirname "$0")/Environment.sh
 
 if ! { ${REMOVE_INTERMEDIATE} || ${BUILD_PYTHONAPI} || ${BUILD_PYTHONAPI_WHEEL} ; }; then
@@ -98,10 +99,12 @@ fi
 if ${BUILD_PYTHONAPI} ; then
   # Add patchelf to the path. Auditwheel relies on patchelf to repair ELF files.
   export PATH="${LIBCARLA_INSTALL_CLIENT_FOLDER}/bin:${PATH}"
+  log "${PATH}"
   
   for PY_VERSION in ${PY_VERSION_LIST[@]} ; do
     log "Building Python API wheel for Python ${PY_VERSION}."
     /usr/bin/env python${PY_VERSION} -m build --wheel --outdir dist/.tmp .
+    log "Done"
 
     if ${INSTALL_PYTHONAPI} ; then
       log "Installing Python API for Python ${PY_VERSION}."

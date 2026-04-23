@@ -42,65 +42,8 @@ logger = logging.getLogger("example_replay_recording")
 from nurec_integration import NurecScenario, ShutterType
 from pygame_display import PygameDisplay
 from constants import EGO_TRACK_ID
-from utils import handle_exception
+from utils import handle_exception, make_transform_matrix
 from typing import Tuple, Optional
-
-
-def make_transform_matrix(rotation=None, translation=None):
-    """
-    Create a 4x4 compatible with your consumer:
-    - Unreal/CARLA rotation: yaw(Z), pitch(Y), roll(X), in degrees.
-    - Translation [x, y, z].
-    - Adjust the axes so that the consumer's forward (Z column) points to +X of the world.
-    """
-    mat = np.eye(4, dtype=float)
-
-    if rotation is not None:
-        pitch_deg, yaw_deg, roll_deg = rotation
-        yaw   = np.radians(yaw_deg)
-        pitch = np.radians(pitch_deg)
-        roll  = np.radians(roll_deg)
-
-        # Basic rotations (right = +Y, up = +Z, forward = +X)
-        Rz_yaw = np.array([
-            [ np.cos(yaw), -np.sin(yaw), 0.0],
-            [ np.sin(yaw),  np.cos(yaw), 0.0],
-            [          0.,           0., 1.0]
-        ])
-
-        Ry_pitch = np.array([
-            [ np.cos(pitch), 0.0, np.sin(pitch)],
-            [           0.0, 1.0,           0.0],
-            [-np.sin(pitch), 0.0, np.cos(pitch)]
-        ])
-
-        Rx_roll = np.array([
-            [1.0,          0.0,           0.0],
-            [0.0,  np.cos(roll), -np.sin(roll)],
-            [0.0,  np.sin(roll),  np.cos(roll)]
-        ])
-
-        # Unreal Order: R = Rz(yaw) * Ry(pitch) * Rx(roll)
-        R_unreal = Rz_yaw @ Ry_pitch @ Rx_roll
-
-        # Change of basis matrix (columns = engine axes in Unreal coordinates):
-        # col0 = engine_X = -Unreal_Y = (0,-1,0)
-        # col1 = engine_Y = -Unreal_Z = (0, 0,-1)
-        # col2 = engine_Z =  Unreal_X = (1, 0, 0)
-        A = np.array([
-            [ 0.0,  0.0, 1.0],
-            [-1.0,  0.0, 0.0],
-            [ 0.0, -1.0, 0.0]
-        ])
-
-        # Rotación final para tu consumidor
-        R_engine = R_unreal @ A
-        mat[:3, :3] = R_engine
-
-    if translation is not None:
-        mat[:3, 3] = translation
-
-    return mat
 
 
 def parse_camera_params(cam_cfg):

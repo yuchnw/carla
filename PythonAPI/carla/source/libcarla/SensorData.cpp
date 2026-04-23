@@ -154,6 +154,7 @@ namespace data {
         << ", azimuth=" << std::to_string(det.azimuth)
         << ", altitude=" << std::to_string(det.altitude)
         << ", depth=" << std::to_string(det.depth)
+        << ", id=" << std::to_string(det.actor_id)
         << ')';
     return out;
   }
@@ -640,6 +641,7 @@ void export_sensor_data() {
     .def_readwrite("azimuth", &csd::RadarDetection::azimuth)
     .def_readwrite("altitude", &csd::RadarDetection::altitude)
     .def_readwrite("depth", &csd::RadarDetection::depth)
+    .def_readwrite("actor_id", &csd::RadarDetection::actor_id)
     .def(self_ns::str(self_ns::self))
   ;
 

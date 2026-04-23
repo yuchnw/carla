@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package nre.grpc.protos.stream;
+
+service ImageService {
+  rpc GetLatestImage (ImageRequest) returns (ImageResponse);
+}
+
+message ImageRequest {
+  float ego_x = 1;
+  float ego_y = 2;
+  float ego_z = 3;
+  float ego_roll = 4;
+  float ego_pitch = 5;
+  float ego_yaw = 6;
+  fixed64 timestamp = 7;
+}
+
+message ImageResponse {
+  bytes front_left_image = 1;  // raw or encoded RGB
+  bytes front_right_image = 2;
+  bytes front_center_image = 3;
+  bytes left_front_image = 4;
+  bytes left_side_image = 5;
+  bytes left_rear_image = 6;
+  bytes right_front_image = 7;
+  bytes right_side_image = 8;
+  bytes right_rear_image = 9;
+}

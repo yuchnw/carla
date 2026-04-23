@@ -167,6 +167,7 @@ def get_t_rig_enu_from_ecef(t_rig_ecef: np.ndarray, xodr_data: str) -> np.ndarra
     lat_long_alt = np.array([lat, lon, alt]).reshape(1, 3)
 
     t_ecef_enu = ecef_2_ENU(lat_long_alt, earth_model="WGS84")
+    # print(ecef_to_latlon(-2687267.632713982, -4304034.233292144, 3851523.203921809))
 
     t_rig_enu =t_ecef_enu @ t_rig_ecef
     
@@ -177,3 +178,37 @@ def get_t_rig_enu_from_ecef(t_rig_ecef: np.ndarray, xodr_data: str) -> np.ndarra
         return np.identity(4)
 
     return t_rig_enu
+
+def get_latlon_from_t_ecef(t_ecef: np.ndarray):
+    """
+    Convert a transformation matrix in ECEF coordinates to latitude, longitude, and altitude.
+    
+    :param t_ecef: 4x4 transformation matrix in ECEF coordinates.
+    :return: Tuple containing latitude, longitude, and altitude (lat, lon, alt)
+    """
+    from pyproj import Transformer
+    transformer = Transformer.from_crs("EPSG:4978", "EPSG:4326", always_xy=True)
+    x = t_ecef[0, 3]
+    y = t_ecef[1, 3]
+    z = t_ecef[2, 3]
+    lon, lat, alt = transformer.transform(x, y, z)
+    return lat, lon, alt
+
+def R_enu_from_latlon(lat, lon):
+    sl, cl = np.sin(lon), np.cos(lon)
+    sp, cp = np.sin(lat), np.cos(lat)
+    return np.array([
+        [-sl,        cl,      0.0],
+        [-sp*cl, -sp*sl,   cp],
+        [ cp*cl,  cp*sl,   sp],
+    ], dtype=float)
+
+def yaw_from_t_ecef(t_ecef, lat, lon, forward_body):
+    R_ecef_body = t_ecef[:3, :3]
+    R_enu_ecef  = R_enu_from_latlon(lat, lon)
+
+    f_ecef = R_ecef_body @ np.asarray(forward_body, dtype=float)
+    f_enu  = R_enu_ecef @ f_ecef
+
+    yaw = np.arctan2(f_enu[0], f_enu[1])  # atan2(East, North)
+    return yaw

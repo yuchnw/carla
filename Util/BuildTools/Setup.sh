@@ -12,7 +12,7 @@ OPTS=`getopt -o h --long help,chrono,chrono-path:,ros2,pytorch,python-version: -
 
 eval set -- "$OPTS"
 
-PY_VERSION_LIST=3
+PY_VERSION_LIST=3.10
 USE_CHRONO=false
 USE_PYTORCH=false
 USE_ROS2=false
@@ -52,10 +52,16 @@ done
 
 source $(dirname "$0")/Environment.sh
 
+export UE4_ROOT=/home/yuchen.wang/UnrealEngine_4.26
+
 export CC="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang"
 export CXX="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin/clang++"
 export PATH="$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/bin:$PATH"
 
+export CC=/usr/bin/clang-10
+export CXX=/usr/bin/clang++-10
+export CMAKE_C_COMPILER=$CC
+export CMAKE_CXX_COMPILER=$CXX
 CXX_TAG=c10
 
 # Convert comma-separated string to array of unique elements.
@@ -66,7 +72,7 @@ pushd ${CARLA_BUILD_FOLDER} >/dev/null
 
 LLVM_INCLUDE="$UE4_ROOT/Engine/Source/ThirdParty/Linux/LibCxx/include/c++/v1"
 LLVM_LIBPATH="$UE4_ROOT/Engine/Source/ThirdParty/Linux/LibCxx/lib/Linux/x86_64-unknown-linux-gnu"
-UNREAL_HOSTED_CFLAGS="--sysroot=$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/"
+# UNREAL_HOSTED_CFLAGS="--sysroot=$UE4_ROOT/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v17_clang-10.0.1-centos7/x86_64-unknown-linux-gnu/"
 
 # ==============================================================================
 # -- Generate CMake toolchains -------------------------------------------------
@@ -174,6 +180,8 @@ for PY_VERSION in ${PY_VERSION_LIST[@]} ; do
     BOOST_TOOLSET="clang-10.0"
     BOOST_CFLAGS="-fPIC -std=c++14 -DBOOST_ERROR_CODE_HEADER_ONLY"
 
+    echo "Step 1"
+
     py3="/usr/bin/env python${PY_VERSION}"
     py3_root=`${py3} -c "import sysconfig; print(sysconfig.get_config_var('prefix'))"`
     py3_include=$(${py3} -c "from sysconfig import get_paths as gp; print(gp()['include'])")
@@ -251,6 +259,11 @@ else
   mkdir -p ${RPCLIB_BASENAME}-libcxx-build
 
   pushd ${RPCLIB_BASENAME}-libcxx-build >/dev/null
+
+  export CC=/usr/bin/clang-10
+  export CXX=/usr/bin/clang++-10
+  export CMAKE_C_COMPILER=$CC
+  export CMAKE_CXX_COMPILER=$CXX
 
   cmake -G "Ninja" \
       -DCMAKE_CXX_FLAGS="-fPIC -std=c++14 -stdlib=libc++ -I${LLVM_INCLUDE} -Wl,-L${LLVM_LIBPATH} -DBOOST_NO_EXCEPTIONS -DASIO_NO_EXCEPTIONS ${UNREAL_HOSTED_CFLAGS}" \
@@ -421,42 +434,43 @@ unset RECAST_BASENAME
 # -- Get and compile libpng 1.6.37 ------------------------------
 # ==============================================================================
 
-LIBPNG_VERSION=1.6.37
-LIBPNG_REPO=https://sourceforge.net/projects/libpng/files/libpng16/${LIBPNG_VERSION}/libpng-${LIBPNG_VERSION}.tar.xz
-LIBPNG_BASENAME=libpng-${LIBPNG_VERSION}
-LIBPNG_INSTALL=${LIBPNG_BASENAME}-install
+# LIBPNG_VERSION=1.6.37
+# LIBPNG_REPO=https://sourceforge.net/projects/libpng/files/libpng16/${LIBPNG_VERSION}/libpng-${LIBPNG_VERSION}.tar.xz
+# LIBPNG_BASENAME=libpng-${LIBPNG_VERSION}
+# LIBPNG_INSTALL=${LIBPNG_BASENAME}-install
 
-LIBPNG_INCLUDE=${PWD}/${LIBPNG_BASENAME}-install/include/
-LIBPNG_LIBPATH=${PWD}/${LIBPNG_BASENAME}-install/lib
+# LIBPNG_INCLUDE=${PWD}/${LIBPNG_BASENAME}-install/include/
+# LIBPNG_LIBPATH=${PWD}/${LIBPNG_BASENAME}-install/lib
 
-if [[ -d ${LIBPNG_INSTALL} ]] ; then
-  log "Libpng already installed."
-else
-  log "Retrieving libpng."
+# if [[ -d ${LIBPNG_INSTALL} ]] ; then
+#   log "Libpng already installed."
+# else
+#   log "Retrieving libpng."
 
-  start=$(date +%s)
-  wget ${LIBPNG_REPO}
-  end=$(date +%s)
-  echo "Elapsed Time downloading libpng: $(($end-$start)) seconds"
+#   start=$(date +%s)
+#   wget ${LIBPNG_REPO}
+#   end=$(date +%s)
+#   echo "Elapsed Time downloading libpng: $(($end-$start)) seconds"
 
-  start=$(date +%s)
-  log "Extracting libpng."
-  tar -xf libpng-${LIBPNG_VERSION}.tar.xz
-  end=$(date +%s)
-  echo "Elapsed Time Extracting libpng: $(($end-$start)) seconds"
+#   start=$(date +%s)
+#   log "Extracting libpng."
+#   tar -xf libpng-${LIBPNG_VERSION}.tar.xz
+#   end=$(date +%s)
+#   echo "Elapsed Time Extracting libpng: $(($end-$start)) seconds"
 
-  mv ${LIBPNG_BASENAME} ${LIBPNG_BASENAME}-source
+#   mv ${LIBPNG_BASENAME} ${LIBPNG_BASENAME}-source
 
-  pushd ${LIBPNG_BASENAME}-source >/dev/null
+#   pushd ${LIBPNG_BASENAME}-source >/dev/null
 
-  ./configure --prefix=${CARLA_BUILD_FOLDER}/${LIBPNG_INSTALL}
-  make install
+#   ./configure --prefix=${CARLA_BUILD_FOLDER}/${LIBPNG_INSTALL}
+#   make install
 
-  popd >/dev/null
+#   popd >/dev/null
 
-  rm -Rf libpng-${LIBPNG_VERSION}.tar.xz
-  rm -Rf ${LIBPNG_BASENAME}-source
-fi
+#   rm -Rf libpng-${LIBPNG_VERSION}.tar.xz
+#   rm -Rf ${LIBPNG_BASENAME}-source
+# fi
+log "Skipping libpng build, using system libpng"
 
 # ==============================================================================
 # -- Get and compile libxerces 3.2.3 ------------------------------
@@ -1007,7 +1021,8 @@ fi
 # -- Generate Version.h --------------------------------------------------------
 # ==============================================================================
 
-CARLA_VERSION=$(get_git_repository_version)
+# CARLA_VERSION=$(get_git_repository_version)
+CARLA_VERSION=0.9.16
 
 log "CARLA version ${CARLA_VERSION}."
 

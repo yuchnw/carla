@@ -9,6 +9,7 @@
 #include "Carla.h"
 #include "Carla/Actor/ActorBlueprintFunctionLibrary.h"
 #include "Carla/Sensor/RayCastSemanticLidar.h"
+#include "Carla/Sensor/RayCastLidarPattern.h"
 
 #include <compiler/disable-ue4-macros.h>
 #include "carla/geom/Math.h"
@@ -44,6 +45,7 @@ void ARayCastSemanticLidar::Set(const FActorDescription &ActorDescription)
 void ARayCastSemanticLidar::Set(const FLidarDescription &LidarDescription)
 {
   Description = LidarDescription;
+  LidarPattern = RayCastLidarPattern(Description);
   SemanticLidarData = FSemanticLidarData(Description.Channels);
   CreateLasers();
   PointsPerChannel.resize(Description.Channels);
@@ -59,8 +61,12 @@ void ARayCastSemanticLidar::CreateLasers()
   LaserAngles.Empty(NumberOfLasers);
   for(auto i = 0u; i < NumberOfLasers; ++i)
   {
-    const float VerticalAngle =
-        Description.UpperFovLimit - static_cast<float>(i) * DeltaAngle;
+    float VerticalAngle;
+    if (i < LidarPattern.ElevationsDeg.size()) {
+      VerticalAngle = LidarPattern.ElevationsDeg[i];
+    } else {
+      VerticalAngle = Description.LowerFovLimit + static_cast<float>(i) * DeltaAngle;
+    }
     LaserAngles.Emplace(VerticalAngle);
   }
 }

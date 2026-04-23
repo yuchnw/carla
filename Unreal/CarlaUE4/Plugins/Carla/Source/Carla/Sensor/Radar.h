@@ -44,6 +44,9 @@ public:
   UFUNCTION(BlueprintCallable, Category = "Radar")
   void SetPointsPerSecond(int NewPointsPerSecond);
 
+  UFUNCTION(BlueprintCallable, Category = "Radar")
+  void SetRadarType(FString SetRadarType);
+
 protected:
 
   void BeginPlay() override;
@@ -63,6 +66,9 @@ protected:
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Detection")
   int PointsPerSecond;
 
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Detection")
+  FString RadarType;
+
 private:
 
   void CalculateCurrentVelocity(const float DeltaTime);
@@ -80,6 +86,8 @@ private:
   /// Used to compute the velocity of the radar
   FVector PrevLocation;
 
+  static constexpr double kDegToRad = 0.01745329;
+
   struct RayData {
     float Radius;
     float Angle;
@@ -87,6 +95,7 @@ private:
     float RelativeVelocity;
     FVector2D AzimuthAndElevation;
     float Distance;
+    uint32_t ActorId;
   };
 
   std::vector<RayData> Rays;

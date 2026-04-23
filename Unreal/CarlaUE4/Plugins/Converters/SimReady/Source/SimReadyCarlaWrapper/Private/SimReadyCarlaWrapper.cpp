@@ -303,7 +303,7 @@ namespace SimReadyCarlaWrapper
             }
             else
             {
-                UE_LOG(LogSimReadyCarlaWrapper, Error, TEXT("Failed to load traffic light model at '/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_RHT.BP_TLOpenDrive_RHT_C'"));
+                UE_LOG(LogSimReadyCarlaWrapper, Warning, TEXT("Failed to load traffic light model at '/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_RHT.BP_TLOpenDrive_RHT_C'"));
             }
         }
         else
@@ -315,7 +315,7 @@ namespace SimReadyCarlaWrapper
             }
             else
             {
-                UE_LOG(LogSimReadyCarlaWrapper, Error, TEXT("Failed to load traffic light model at '/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_LHT.BP_TLOpenDrive_LHT_C'"));
+                UE_LOG(LogSimReadyCarlaWrapper, Warning, TEXT("Failed to load traffic light model at '/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_LHT.BP_TLOpenDrive_LHT_C'"));
             }
         }
 

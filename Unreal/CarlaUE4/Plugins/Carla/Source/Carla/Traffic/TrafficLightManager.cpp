@@ -29,22 +29,22 @@ ATrafficLightManager::ATrafficLightManager()
   RootComponent = SceneComponent;
 
   // Hard coded default traffic light blueprint
-  static ConstructorHelpers::FClassFinder<AActor> TrafficLightRHTFinder(
-      TEXT( "/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_RHT" ) );
-  if (TrafficLightRHTFinder.Succeeded())
-  {
-    TSubclassOf<AActor> Model = TrafficLightRHTFinder.Class;
-    TrafficLightModel_RHT = Model;
-  }
+  // static ConstructorHelpers::FClassFinder<AActor> TrafficLightRHTFinder(
+  //     TEXT( "/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_RHT" ) );
+  // if (TrafficLightRHTFinder.Succeeded())
+  // {
+  //   TSubclassOf<AActor> Model = TrafficLightRHTFinder.Class;
+  //   TrafficLightModel_RHT = Model;
+  // }
 
   // Hard coded default traffic light blueprint
-  static ConstructorHelpers::FClassFinder<AActor> TrafficLightLHTFinder(
-    TEXT( "/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_LHT" ) );
-  if (TrafficLightLHTFinder.Succeeded())
-  {
-    TSubclassOf<AActor> Model = TrafficLightLHTFinder.Class;
-    TrafficLightModel_LHT = Model;
-  }
+  // static ConstructorHelpers::FClassFinder<AActor> TrafficLightLHTFinder(
+  //   TEXT( "/Game/Carla/Blueprints/TrafficLight/BP_TLOpenDrive_LHT" ) );
+  // if (TrafficLightLHTFinder.Succeeded())
+  // {
+  //   TSubclassOf<AActor> Model = TrafficLightLHTFinder.Class;
+  //   TrafficLightModel_LHT = Model;
+  // }
   // Default traffic signs models
   static ConstructorHelpers::FClassFinder<AActor> StopFinder(
       TEXT( "/Game/Carla/Static/TrafficSign/BP_Stop" ) );

@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.26",
+	"EngineAssociation": "{0004AB48-08DD-9F72-FFC4-7D1659F246C3}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -124,6 +124,42 @@
 		{
 			"Name": "HairStrands",
 			"Enabled": true
+		},
+		{
+			"Name": "StreetMap",
+			"Enabled": true
+		},
+		{
+			"Name": "HoudiniEngine",
+			"Enabled": true
+		},
+		{
+			"Name": "RoadRunnerCarlaDatasmith",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerCarlaIntegration",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerImporter",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerDatasmith",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerRuntime",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerCarlaContent",
+			"Enabled": false
+		},
+		{
+			"Name": "RoadRunnerMaterials",
+			"Enabled": false
 		}
 	]
 }

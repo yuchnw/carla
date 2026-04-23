@@ -129,6 +129,9 @@ message CameraSpec {
     oneof external_distortion {
         BivariateWindshieldModelParameters bivariate_windshield_model_param = 10;
     }
+
+    string camera_type = 11;
+    nre.grpc.protos.common.Pose tr_cam_to_imu = 12;
 }
 
 message PosePair {

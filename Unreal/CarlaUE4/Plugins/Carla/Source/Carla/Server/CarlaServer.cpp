@@ -482,6 +482,7 @@ void FCarlaServer::FPimpl::BindActions()
   BIND_SYNC(get_map_data) << [this]() -> R<std::string>
   {
     REQUIRE_CARLA_EPISODE();
+    UE_LOG(LogTemp, Log, TEXT("Enter CARLASERVER ------"));
     return cr::FromLongFString(UOpenDrive::GetXODR(Episode->GetWorld()));
   };
 

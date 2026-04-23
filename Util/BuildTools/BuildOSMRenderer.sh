@@ -18,7 +18,9 @@ OSM_RENDERER_BUILD=${CARLA_BUILD_FOLDER}/osm-world-renderer-build
 INSTALLATION_PATH=${OSM_RENDERER_SOURCE}/ThirdParties
 
 
-
+export CC=/usr/bin/gcc-9
+export CXX=/usr/bin/g++-9
+export CXXFLAGS="-std=c++17"
 # ==============================================================================
 # -- Download and build libosmscout --------------------------------------------
 # ==============================================================================

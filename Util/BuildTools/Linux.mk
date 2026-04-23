@@ -32,7 +32,7 @@ clean.CarlaUE4Editor:
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --clean
 clean.osm2odr:
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildOSM2ODR.sh --clean
-clean: clean.CarlaUE4Editor clean.PythonAPI clean.LibCarla clean.osm2odr
+clean: clean.PythonAPI
 
 rebuild: setup
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildLibCarla.sh --rebuild
